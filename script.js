@@ -33,6 +33,64 @@ async function initializeApp() {
     gisInited = true;
 }
 
+async function initializeSheetStructure() {
+    showLoader(true);
+    try {
+        // 1. Get current sheet metadata to see what tabs already exist
+        const spreadsheet = await gapi.client.sheets.spreadsheets.get({
+            spreadsheetId: SPREADSHEET_ID
+        });
+        
+        const existingTabs = spreadsheet.result.sheets.map(s => s.properties.title);
+        const requiredTabs = ['Stores', 'Employees', 'Attendance'];
+        const missingTabs = requiredTabs.filter(tab => !existingTabs.includes(tab));
+
+        // 2. Only create tabs that are actually missing
+        if (missingTabs.length > 0) {
+            const requests = missingTabs.map(title => ({
+                addSheet: { properties: { title } }
+            }));
+
+            await gapi.client.sheets.spreadsheets.batchUpdate({
+                spreadsheetId: SPREADSHEET_ID,
+                resource: { requests }
+            });
+        }
+
+        // 3. Update Headers for all tabs (safe to overwrite)
+        const headerData = [
+            { range: 'Stores!A1:D1', values: [['ID', 'Name', 'Lat', 'Lng']] },
+            { range: 'Employees!A1:D1', values: [['Email', 'Name', 'StoreName', 'Status']] },
+            { range: 'Attendance!A1:G1', values: [['Timestamp', 'Date', 'Email', 'Action', 'Photo', 'GPS', 'Device']] }
+        ];
+
+        for (let h of headerData) {
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID,
+                range: h.range,
+                valueInputOption: 'USER_ENTERED',
+                resource: { values: h.values }
+            });
+        }
+
+        showToast("Database Synced Successfully!", "success");
+        document.getElementById('setup-card').classList.add('hidden');
+        
+        // Refresh views
+        if (currentUser.email.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
+            setupAdminDashboard();
+        } else {
+            setupStaffDashboard(currentUser.email);
+        }
+
+    } catch (e) {
+        console.error("Detailed Init Error:", e);
+        const errorMsg = e.result?.error?.message || "Check API Permissions";
+        showToast("Init Failed: " + errorMsg, "error");
+    }
+    showLoader(false);
+}
+
 function autoLogin() {
     const savedToken = localStorage.getItem('at_token');
     const expiry = localStorage.getItem('at_expiry');
@@ -87,22 +145,30 @@ function switchView(view) {
 
 async function setupStaffDashboard(email) {
     try {
+        // Fetch Employee data
         const resp = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID, range: 'Employees!A2:D'
         });
+        
         const rows = resp.result.values || [];
         const emp = rows.find(r => r[0].toLowerCase() === email.toLowerCase());
 
         if (!emp) {
-            alert("This email is not registered as an employee.");
+            // Check if we are admin, if so, show admin view
+            if (email.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
+                switchView('admin');
+                return;
+            }
+            alert("Access Denied: Email not found in Employee list.");
             return;
         }
 
+        // Successfully found employee
         currentUser = { email: emp[0], name: emp[1], storeName: emp[2] };
         document.getElementById('staff-welcome').innerText = `Hello, ${currentUser.name}!`;
         document.getElementById('staff-store-tag').innerText = `Home Store: ${currentUser.storeName}`;
         
-        // Load Geofence Data
+        // Load Store GPS
         const storeResp = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID, range: 'Stores!A2:D'
         });
@@ -112,8 +178,16 @@ async function setupStaffDashboard(email) {
         checkTodayAttendance();
         setupCamera();
         loadPersonalHistory();
+        document.getElementById('setup-card').classList.add('hidden');
+
     } catch (e) { 
-        document.getElementById('setup-card').classList.remove('hidden'); 
+        // If error is "400" it usually means the Tab doesn't exist
+        if (e.status === 400) {
+            console.warn("Tabs missing. Showing setup card.");
+            document.getElementById('setup-card').classList.remove('hidden'); 
+        } else {
+            console.error("Dashboard Error:", e);
+        }
     }
 }
 
