@@ -5,7 +5,8 @@ const SPREADSHEET_ID = '1UpHxRuvfYWguE78__bYR2sfjxRn6sskqOa5Po7XUoCU';
 const OWNER_EMAIL = 'krishnahospitalsapotra@gmail.com'; // Admin account
 
 const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
+//const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email';
 
 let tokenClient, gisInited = false, gapiInited = false, accessToken = null;
 let currentUser = null, currentStoreData = null, staffPhoto = null;
@@ -36,57 +37,45 @@ async function initializeApp() {
 async function initializeSheetStructure() {
     showLoader(true);
     try {
-        // 1. Get current sheet metadata to see what tabs already exist
-        const spreadsheet = await gapi.client.sheets.spreadsheets.get({
-            spreadsheetId: SPREADSHEET_ID
-        });
+        // 1. Get existing sheets
+        const ss = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+        const existingTitles = ss.result.sheets.map(s => s.properties.title);
         
-        const existingTabs = spreadsheet.result.sheets.map(s => s.properties.title);
-        const requiredTabs = ['Stores', 'Employees', 'Attendance'];
-        const missingTabs = requiredTabs.filter(tab => !existingTabs.includes(tab));
+        const required = ['Stores', 'Employees', 'Attendance'];
+        const toCreate = required.filter(t => !existingTitles.includes(t));
 
-        // 2. Only create tabs that are actually missing
-        if (missingTabs.length > 0) {
-            const requests = missingTabs.map(title => ({
-                addSheet: { properties: { title } }
-            }));
-
+        // 2. Create missing tabs only
+        if (toCreate.length > 0) {
             await gapi.client.sheets.spreadsheets.batchUpdate({
                 spreadsheetId: SPREADSHEET_ID,
-                resource: { requests }
+                resource: { requests: toCreate.map(t => ({ addSheet: { properties: { title: t } } })) }
             });
         }
 
-        // 3. Update Headers for all tabs (safe to overwrite)
-        const headerData = [
+        // 3. Force update headers (This works even if tabs existed)
+        const headers = [
             { range: 'Stores!A1:D1', values: [['ID', 'Name', 'Lat', 'Lng']] },
             { range: 'Employees!A1:D1', values: [['Email', 'Name', 'StoreName', 'Status']] },
             { range: 'Attendance!A1:G1', values: [['Timestamp', 'Date', 'Email', 'Action', 'Photo', 'GPS', 'Device']] }
         ];
 
-        for (let h of headerData) {
+        for (const h of headers) {
             await gapi.client.sheets.spreadsheets.values.update({
-                spreadsheetId: SPREADSHEET_ID,
-                range: h.range,
-                valueInputOption: 'USER_ENTERED',
-                resource: { values: h.values }
+                spreadsheetId: SPREADSHEET_ID, range: h.range,
+                valueInputOption: 'USER_ENTERED', resource: { values: h.values }
             });
         }
 
-        showToast("Database Synced Successfully!", "success");
+        showToast("Database Synced!", "success");
         document.getElementById('setup-card').classList.add('hidden');
-        
-        // Refresh views
-        if (currentUser.email.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
-            setupAdminDashboard();
-        } else {
-            setupStaffDashboard(currentUser.email);
-        }
+        loadAdminStats();
 
     } catch (e) {
-        console.error("Detailed Init Error:", e);
-        const errorMsg = e.result?.error?.message || "Check API Permissions";
-        showToast("Init Failed: " + errorMsg, "error");
+        console.error("Detailed Error:", e);
+        // This alert is critical for debugging
+        const msg = e.result?.error?.message || "Check Console for details";
+        alert("Google Error: " + msg); 
+        showToast("Initialization Failed", "error");
     }
     showLoader(false);
 }
@@ -110,21 +99,22 @@ async function loadProfile() {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
         const userInfo = await resp.json();
+        const email = userInfo.email.toLowerCase();
         
         document.getElementById('login-view').classList.add('hidden');
         document.getElementById('user-badge').classList.remove('hidden');
-        document.getElementById('user-display-name').innerText = userInfo.name || userInfo.email;
+        document.getElementById('user-display-name').innerText = userInfo.name || email;
 
-        // Show Admin Switch button if authorized
-        if (userInfo.email.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
+        // ADMIN BYPASS: If you are the owner, go to Admin view immediately
+        if (email === OWNER_EMAIL.toLowerCase()) {
             document.getElementById('admin-switch-btn').classList.remove('hidden');
+            switchView('admin'); 
+        } else {
+            setupStaffDashboard(email);
         }
-
-        // Landing page is always Employee View
-        setupStaffDashboard(userInfo.email);
     } catch (e) {
-        localStorage.clear();
-        location.reload();
+        console.error("Profile Load Error:", e);
+        showToast("Login Failed. Try again.", "error");
     }
     showLoader(false);
 }
