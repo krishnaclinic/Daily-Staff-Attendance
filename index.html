@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro-Attend | Advanced GPS Attendance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .loading-overlay { display: none; background: rgba(255,255,255,0.8); z-index: 9999; }
+        .loading-overlay.active { display: flex; }
+        canvas { display: none; }
+        #video-preview { transform: scaleX(-1); border-radius: 12px; }
+        .toast { transition: transform 0.3s ease-in-out; transform: translateY(100px); }
+        .toast.active { transform: translateY(0); }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen pb-20">
+
+    <!-- Global Loading Spinner -->
+    <div id="loader" class="loading-overlay fixed inset-0 flex flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-indigo-700"></div>
+        <p class="mt-4 font-bold text-indigo-700">Processing...</p>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-indigo-700 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-fingerprint"></i> Pro-Attend
+            </h1>
+            <div class="flex gap-2">
+                <button id="admin-toggle-btn" onclick="toggleView('admin')" class="hidden bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm transition">
+                    <i class="fas fa-user-shield"></i> Admin
+                </button>
+                <button id="logout-btn" onclick="logout()" class="hidden bg-rose-600 hover:bg-rose-700 px-3 py-1 rounded text-sm transition">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4">
+        <!-- Auth View -->
+        <section id="view-auth" class="mt-20 text-center">
+            <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
+                <i class="fas fa-user-circle text-6xl text-slate-300 mb-4"></i>
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Welcome Back</h2>
+                <p class="text-slate-500 mb-8">Please sign in with your corporate Google account.</p>
+                <button onclick="login()" class="bg-white border border-slate-300 text-slate-700 px-6 py-3 rounded-lg flex items-center gap-3 mx-auto hover:bg-slate-50 transition shadow-sm">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/g_logo_500px_clr.png" class="w-5" alt="Google">
+                    Sign in with Google
+                </button>
+            </div>
+        </section>
+
+        <!-- Attendance View (Default Landing) -->
+        <section id="view-attendance" class="hidden space-y-6">
+            <!-- Status Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border-l-8 border-indigo-700">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-slate-500 uppercase tracking-wider font-semibold">Current Status</p>
+                        <h2 id="shift-status" class="text-2xl font-bold text-slate-800 tracking-tight">Checking status...</h2>
+                        <p id="user-display-name" class="text-indigo-600 font-medium"></p>
+                    </div>
+                    <div id="sync-badge" class="hidden bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                        <i class="fas fa-wifi-slash"></i> Offline Logs Pending
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Controls -->
+            <div class="bg-white p-6 rounded-2xl shadow-md space-y-6">
+                <!-- Camera Section -->
+                <div class="relative overflow-hidden bg-slate-100 rounded-xl aspect-square max-w-xs mx-auto flex items-center justify-center border-2 border-dashed border-slate-300">
+                    <video id="video-preview" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+                    <img id="captured-photo" class="w-full h-full object-cover hidden" />
+                    <div id="camera-placeholder" class="text-center p-4">
+                        <i class="fas fa-camera text-4xl text-slate-400 mb-2"></i>
+                        <p class="text-xs text-slate-500">Selfie verification required</p>
+                    </div>
+                    <button onclick="startCamera()" id="start-camera-btn" class="absolute bottom-4 bg-indigo-700 text-white px-4 py-2 rounded-full text-sm shadow-lg">
+                        <i class="fas fa-video mr-1"></i> Open Camera
+                    </button>
+                    <button onclick="capturePhoto()" id="capture-btn" class="hidden absolute bottom-4 bg-emerald-500 text-white px-4 py-2 rounded-full text-sm shadow-lg font-bold">
+                        <i class="fas fa-circle mr-1"></i> Capture
+                    </button>
+                </div>
+
+                <!-- GPS & Punch Actions -->
+                <div class="space-y-4">
+                    <div id="location-status" class="text-center text-sm font-medium p-3 rounded-lg bg-slate-100 text-slate-600">
+                        <i class="fas fa-location-dot animate-bounce"></i> Validating Geofence...
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <button id="btn-punch-in" disabled onclick="handlePunch('IN')" class="bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg active:scale-95">
+                            PUNCH IN
+                        </button>
+                        <button id="btn-punch-out" disabled onclick="handlePunch('OUT')" class="bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg active:scale-95">
+                            PUNCH OUT
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin View -->
+        <section id="view-admin" class="hidden space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-slate-800">Smart Manager</h2>
+                <button onclick="adminSyncDatabase()" class="bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold">
+                    <i class="fas fa-sync"></i> Smart Sync DB
+                </button>
+            </div>
+
+            <!-- Dashboard Stats -->
+            <div class="grid grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-xs text-slate-500">Staff Present</p>
+                    <p id="stat-present" class="text-xl font-bold text-indigo-700">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-xs text-slate-500">Total Stores</p>
+                    <p id="stat-stores" class="text-xl font-bold text-slate-700">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-xs text-slate-500">Offline</p>
+                    <p id="stat-offline" class="text-xl font-bold text-rose-600">0</p>
+                </div>
+            </div>
+
+            <!-- Store Management -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                <h3 class="font-bold mb-4 text-slate-700 border-b pb-2">Add New Store</h3>
+                <form id="form-store" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="text" id="store-name" placeholder="Store Name" class="border p-2 rounded" required>
+                    <input type="text" id="store-lat" placeholder="Latitude" class="border p-2 rounded" required>
+                    <input type="text" id="store-lng" placeholder="Longitude" class="border p-2 rounded" required>
+                    <button type="submit" class="bg-emerald-500 text-white font-bold p-2 rounded col-span-full">Add Store</button>
+                </form>
+            </div>
+
+            <!-- Employee Onboarding -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                <h3 class="font-bold mb-4 text-slate-700 border-b pb-2">Onboard Employee</h3>
+                <form id="form-employee" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" id="emp-name" placeholder="Full Name" class="border p-2 rounded" required>
+                    <input type="email" id="emp-email" placeholder="Google Email" class="border p-2 rounded" required>
+                    <select id="emp-store" class="border p-2 rounded col-span-full"></select>
+                    <button type="submit" class="bg-emerald-500 text-white font-bold p-2 rounded col-span-full">Add Employee</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] toast bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3">
+        <span id="toast-msg"></span>
+    </div>
+
+    <canvas id="photo-canvas" width="300" height="300"></canvas>
+
+    <script>
+        /**
+         * 1. CONFIGURATION
+         * Paste your Google Cloud and Project credentials here.
+         */
+        const CONFIG = {
+            CLIENT_ID : '747138722746-5moie20nkh3hgpkrhfb4gmvmkiadjbku.apps.googleusercontent.com',
+            API_KEY : 'AIzaSyA3v6zEyQhRq8X-PW0HG1eqhdmk8wbSg8s',
+            SPREADSHEET_ID : '1UpHxRuvfYWguE78__bYR2sfjxRn6sskqOa5Po7XUoCU',
+            OWNER_EMAIL : 'krishnahospitalsapotra@gmail.com',
+            GEOFENCE_RADIUS_M: 150
+        };
+
+        let appState = {
+            token: localStorage.getItem('access_token'),
+            user: JSON.parse(localStorage.getItem('user_info')),
+            stores: [],
+            employeeData: null,
+            capturedBase64: null,
+            currentLat: null,
+            currentLng: null
+        };
+
+        /**
+         * 2. UTILS & UI
+         */
+        function showLoader(show) { document.getElementById('loader').classList.toggle('active', show); }
+
+        function showToast(msg, isError = false) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            t.classList.add('active');
+            t.classList.toggle('bg-rose-600', isError);
+            setTimeout(() => t.classList.remove('active'), 3000);
+        }
+
+        function toggleView(view) {
+            ['auth', 'attendance', 'admin'].forEach(v => {
+                document.getElementById(`view-${v}`).classList.add('hidden');
+            });
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            if(view === 'admin') loadAdminStats();
+        }
+
+        /**
+         * 3. AUTH LOGIC (GIS)
+         */
+        let tokenClient;
+
+        function initGIS() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CONFIG.CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/spreadsheets',
+                callback: (resp) => {
+                    if (resp.error) return;
+                    appState.token = resp.access_token;
+                    localStorage.setItem('access_token', resp.access_token);
+                    localStorage.setItem('token_expiry', Date.now() + (resp.expires_in * 1000));
+                    handleAuthSuccess();
+                }
+            });
+            
+            // Auto-login check
+            const expiry = localStorage.getItem('token_expiry');
+            if(appState.token && expiry > Date.now()) {
+                handleAuthSuccess();
+            }
+        }
+
+        function login() {
+            tokenClient.requestAccessToken();
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        async function handleAuthSuccess() {
+            showLoader(true);
+            try {
+                // Get basic user info (In a real app, use the userinfo endpoint, here we trust the login context)
+                // We'll fetch the user email from the spreadsheet's perspective via an API check
+                const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
+                    headers: { Authorization: `Bearer ${appState.token}` }
+                });
+                appState.user = await response.json();
+                localStorage.setItem('user_info', JSON.stringify(appState.user));
+
+                // Show admin button if owner
+                if(appState.user.email === CONFIG.OWNER_EMAIL) {
+                    document.getElementById('admin-toggle-btn').classList.remove('hidden');
+                }
+                
+                document.getElementById('logout-btn').classList.remove('hidden');
+                document.getElementById('user-display-name').innerText = appState.user.name;
+                
+                await initializeAppData();
+                toggleView('attendance');
+                startGeofencing();
+            } catch (e) {
+                showToast("Auth failed: " + e.message, true);
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        /**
+         * 4. DATABASE & DATA FETCHING
+         */
+        async function sheetsRequest(method, path, body = null) {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}${path}`;
+            const options = {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${appState.token}`,
+                    'Content-Type': 'application/json'
+                }
+            };
+            if(body) options.body = JSON.stringify(body);
+            const res = await fetch(url, options);
+            if(!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error.message);
+            }
+            return res.json();
+        }
+
+        async function initializeAppData() {
+            try {
+                // Fetch Stores and Employee list
+                const storesData = await sheetsRequest('GET', '/values/Stores!A2:D');
+                appState.stores = (storesData.values || []).map(r => ({ id: r[0], name: r[1], lat: r[2], lng: r[3] }));
+
+                const empData = await sheetsRequest('GET', '/values/Employees!A2:D');
+                const myRow = (empData.values || []).find(r => r[0] === appState.user.email);
+                
+                if(!myRow && appState.user.email !== CONFIG.OWNER_EMAIL) {
+                    alert("User not registered in database. Contact Admin.");
+                    logout();
+                    return;
+                }
+                appState.employeeData = myRow ? { email: myRow[0], name: myRow[1], store: myRow[2] } : null;
+                
+                // Load Stores into Admin Dropdown
+                const dropdown = document.getElementById('emp-store');
+                dropdown.innerHTML = appState.stores.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+
+                checkShiftStatus();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function checkShiftStatus() {
+            const today = new Date().toISOString().split('T')[0];
+            const logs = await sheetsRequest('GET', '/values/Attendance!A2:G');
+            const myLogs = (logs.values || []).filter(r => r[1] === today && r[2] === appState.user.email);
+            
+            const statusEl = document.getElementById('shift-status');
+            if(myLogs.length > 0) {
+                const last = myLogs[myLogs.length - 1];
+                statusEl.innerText = `Shift ${last[3]} at ${last[0].split(',')[1]}`;
+            } else {
+                statusEl.innerText = "Shift Not Started";
+            }
+        }
+
+        /**
+         * 5. SMART MANAGER (ADMIN)
+         */
+        async function adminSyncDatabase() {
+            showLoader(true);
+            try {
+                // Check existing tabs
+                const meta = await sheetsRequest('GET', '?fields=sheets.properties.title');
+                const existingTabs = meta.sheets.map(s => s.properties.title);
+                
+                const required = [
+                    { name: 'Stores', headers: ['ID', 'Name', 'Lat', 'Lng'] },
+                    { name: 'Employees', headers: ['Email', 'Name', 'StoreName', 'Status'] },
+                    { name: 'Attendance', headers: ['Timestamp', 'Date', 'Email', 'Action', 'Photo', 'GPS', 'DeviceInfo'] }
+                ];
+
+                for (const tab of required) {
+                    if (!existingTabs.includes(tab.name)) {
+                        await sheetsRequest('POST', ':batchUpdate', {
+                            requests: [{ addSheet: { properties: { title: tab.name } } }]
+                        });
+                        await sheetsRequest('PUT', `/values/${tab.name}!A1:G1?valueInputOption=RAW`, {
+                            values: [tab.headers]
+                        });
+                    }
+                }
+                showToast("Database structure verified.");
+                initializeAppData();
+            } catch (e) {
+                alert("Sync Error: " + e.message);
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        document.getElementById('form-store').onsubmit = async (e) => {
+            e.preventDefault();
+            const row = [Date.now(), document.getElementById('store-name').value, document.getElementById('store-lat').value, document.getElementById('store-lng').value];
+            await sheetsRequest('POST', '/values/Stores!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
+            showToast("Store Added");
+            e.target.reset();
+            initializeAppData();
+        };
+
+        document.getElementById('form-employee').onsubmit = async (e) => {
+            e.preventDefault();
+            const row = [document.getElementById('emp-email').value, document.getElementById('emp-name').value, document.getElementById('emp-store').value, 'Active'];
+            await sheetsRequest('POST', '/values/Employees!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
+            showToast("Employee Added");
+            e.target.reset();
+        };
+
+        async function loadAdminStats() {
+            const att = await sheetsRequest('GET', '/values/Attendance!A2:G');
+            const today = new Date().toISOString().split('T')[0];
+            const present = new Set((att.values || []).filter(r => r[1] === today).map(r => r[2])).size;
+            document.getElementById('stat-present').innerText = present;
+            document.getElementById('stat-stores').innerText = appState.stores.length;
+            document.getElementById('stat-offline').innerText = (JSON.parse(localStorage.getItem('offline_queue')) || []).length;
+        }
+
+        /**
+         * 6. ATTENDANCE LOGIC (GPS, CAMERA, ANTI-TAMPER)
+         */
+        function startGeofencing() {
+            if (!navigator.geolocation) return showToast("GPS Not Supported", true);
+            
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    appState.currentLat = pos.coords.latitude;
+                    appState.currentLng = pos.coords.longitude;
+                    validateProximity();
+                },
+                (err) => { showToast("GPS Access Denied", true); },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        function validateProximity() {
+            if(!appState.employeeData) return;
+            const store = appState.stores.find(s => s.name === appState.employeeData.store);
+            if(!store) return;
+
+            const dist = calculateDistance(appState.currentLat, appState.currentLng, store.lat, store.lng);
+            const statusEl = document.getElementById('location-status');
+            
+            if(dist <= CONFIG.GEOFENCE_RADIUS_M) {
+                statusEl.innerHTML = `<i class="fas fa-check-circle text-emerald-500"></i> Within Range (${Math.round(dist)}m)`;
+                statusEl.className = "text-center text-sm font-bold p-3 rounded-lg bg-emerald-50 text-emerald-700";
+                checkPunchReadiness(true);
+            } else {
+                statusEl.innerHTML = `<i class="fas fa-times-circle text-rose-500"></i> Too Far (${Math.round(dist)}m)`;
+                statusEl.className = "text-center text-sm font-bold p-3 rounded-lg bg-rose-50 text-rose-700";
+                checkPunchReadiness(false);
+            }
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; 
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+                const video = document.getElementById('video-preview');
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                document.getElementById('camera-placeholder').classList.add('hidden');
+                document.getElementById('start-camera-btn').classList.add('hidden');
+                document.getElementById('capture-btn').classList.remove('hidden');
+            } catch (e) {
+                showToast("Camera access denied", true);
+            }
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('video-preview');
+            const canvas = document.getElementById('photo-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Draw mirrored image to canvas
+            ctx.translate(300, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, 300, 300);
+            
+            appState.capturedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            
+            document.getElementById('captured-photo').src = appState.capturedBase64;
+            document.getElementById('captured-photo').classList.remove('hidden');
+            video.classList.add('hidden');
+            document.getElementById('capture-btn').classList.add('hidden');
+            
+            // Stop camera
+            video.srcObject.getTracks().forEach(track => track.stop());
+            
+            validateProximity(); // Re-trigger UI check
+        }
+
+        function checkPunchReadiness(isNear) {
+            const hasPhoto = !!appState.capturedBase64;
+            document.getElementById('btn-punch-in').disabled = !(isNear && hasPhoto);
+            document.getElementById('btn-punch-out').disabled = !(isNear && hasPhoto);
+        }
+
+        async function handlePunch(action) {
+            showLoader(true);
+            try {
+                // Anti-Tamper Time
+                let timeData;
+                try {
+                    const timeRes = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
+                    timeData = await timeRes.json();
+                } catch {
+                    throw new Error("Could not verify network time. Check connection.");
+                }
+
+                const payload = [
+                    new Date(timeData.datetime).toLocaleString(),
+                    new Date(timeData.datetime).toISOString().split('T')[0],
+                    appState.user.email,
+                    action,
+                    appState.capturedBase64,
+                    `${appState.currentLat}, ${appState.currentLng}`,
+                    navigator.userAgent.substring(0, 50)
+                ];
+
+                await sheetsRequest('POST', '/values/Attendance!A:A:append?valueInputOption=USER_ENTERED', { values: [payload] });
+                
+                showToast(`Successfully Punched ${action}`);
+                resetPunchUI();
+                checkShiftStatus();
+            } catch (e) {
+                saveToOfflineQueue(action);
+                showToast("Network Error: Saved to Offline Queue", true);
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        function resetPunchUI() {
+            appState.capturedBase64 = null;
+            document.getElementById('captured-photo').classList.add('hidden');
+            document.getElementById('camera-placeholder').classList.remove('hidden');
+            document.getElementById('start-camera-btn').classList.remove('hidden');
+            checkPunchReadiness(false);
+        }
+
+        function saveToOfflineQueue(action) {
+            const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            queue.push({
+                action,
+                ts: new Date().toLocaleString(),
+                date: new Date().toISOString().split('T')[0],
+                email: appState.user.email,
+                gps: `${appState.currentLat}, ${appState.currentLng}`,
+                photo: appState.capturedBase64
+            });
+            localStorage.setItem('offline_queue', JSON.stringify(queue));
+            document.getElementById('sync-badge').classList.remove('hidden');
+        }
+
+        window.onload = initGIS;
+    </script>
+</body>
+</html>
