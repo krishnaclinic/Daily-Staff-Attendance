@@ -3,34 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro-Attend | Diagnostic Master</title>
+    <title>Pro-Attend | Production v2.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .loading-overlay { display: none; background: rgba(255,255,255,0.95); z-index: 9999; }
-        .loading-overlay.active { display: flex; }
-        #video-preview, #captured-photo { transform: scaleX(-1); border-radius: 1rem; border: 4px solid white; }
-        .toast { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translate(-50%, 150%); left: 50%; bottom: 2rem; }
+        /* Hidden by default to prevent stuck screen on load */
+        .loading-overlay { display: none; background: rgba(255,255,255,0.98); z-index: 9999; position: fixed; inset: 0; }
+        .loading-overlay.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #video-preview, #captured-photo { transform: scaleX(-1); border-radius: 1.5rem; border: 4px solid white; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .toast { transition: all 0.4s ease; transform: translate(-50%, 150%); left: 50%; bottom: 2rem; position: fixed; }
         .toast.active { transform: translate(-50%, 0); }
         canvas { display: none; }
+        .btn-fancy { transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .btn-fancy:active { transform: scale(0.95); }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900">
 
     <!-- Global Fullscreen Loader -->
-    <div id="loader" class="loading-overlay fixed inset-0 flex flex-col items-center justify-center">
-        <div class="animate-spin rounded-full h-14 w-14 border-b-4 border-indigo-700"></div>
-        <p class="mt-4 font-black text-indigo-700 tracking-widest uppercase text-xs">Connecting to Google Cloud...</p>
+    <div id="loader" class="loading-overlay">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-700 mb-4"></div>
+        <p id="loader-msg" class="font-bold text-indigo-700 uppercase tracking-tighter text-xs">Initializing...</p>
     </div>
 
     <!-- App Header -->
-    <header class="bg-indigo-700 text-white p-4 shadow-2xl sticky top-0 z-50">
+    <header class="bg-indigo-700 text-white p-4 shadow-lg sticky top-0 z-50">
         <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-black italic tracking-tighter">PRO-ATTEND</h1>
+            <h1 class="text-xl font-black tracking-tighter">PRO-ATTEND</h1>
             <div class="flex gap-2">
-                <button id="admin-toggle-btn" onclick="toggleView('admin')" class="hidden bg-white/20 hover:bg-white/40 px-4 py-2 rounded-xl text-xs font-bold transition">ADMIN</button>
-                <button id="logout-btn" onclick="logout()" class="hidden bg-rose-600 px-4 py-2 rounded-xl text-xs font-bold transition">LOGOUT</button>
+                <button id="admin-toggle-btn" onclick="toggleView('admin')" class="hidden bg-white/20 px-4 py-2 rounded-xl text-xs font-bold">ADMIN</button>
+                <button id="logout-btn" onclick="logout()" class="hidden bg-rose-600 px-4 py-2 rounded-xl text-xs font-bold">LOGOUT</button>
             </div>
         </div>
     </header>
@@ -38,113 +41,93 @@
     <main class="max-w-4xl mx-auto p-4">
         
         <!-- LOGIN VIEW -->
-        <section id="view-auth" class="mt-24 text-center">
-            <div class="bg-white p-12 rounded-[2rem] shadow-2xl max-w-sm mx-auto border border-slate-200">
-                <div class="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <i class="fas fa-fingerprint text-4xl text-indigo-600"></i>
+        <section id="view-auth" class="mt-20 text-center animate-pulse-slow">
+            <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-sm mx-auto border border-slate-100">
+                <div class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
+                    <i class="fas fa-fingerprint text-3xl text-indigo-600"></i>
                 </div>
-                <h2 class="text-2xl font-black text-slate-800 mb-2">Welcome</h2>
-                <p class="text-slate-400 text-sm mb-10">Sign in with your corporate Google account to continue.</p>
-                <button onclick="login()" class="w-full bg-white border-2 border-slate-200 p-4 rounded-2xl flex items-center justify-center gap-3 font-bold hover:bg-slate-50 transition shadow-sm">
-                    <img src="https://www.gstatic.com/images/branding/product/1x/g_logo_500px_clr.png" class="w-5">
-                    Sign in with Google
+                <h2 class="text-2xl font-black text-slate-800 mb-2">Staff Login</h2>
+                <p class="text-slate-400 text-sm mb-8 leading-relaxed">Please authenticate with your Google Workspace account.</p>
+                <button onclick="login()" class="w-full bg-slate-900 text-white p-4 rounded-2xl flex items-center justify-center gap-3 font-bold hover:bg-black transition btn-fancy">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/g_logo_500px_clr.png" class="w-5 bg-white rounded-full p-0.5">
+                    Continue with Google
                 </button>
             </div>
         </section>
 
         <!-- ATTENDANCE VIEW -->
         <section id="view-attendance" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-3xl shadow-xl border-t-8 border-indigo-600">
+            <div class="bg-white p-6 rounded-3xl shadow-lg border-l-8 border-indigo-600">
                 <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Live Status</p>
                 <h2 id="shift-status" class="text-2xl font-black text-slate-800 tracking-tight">System Ready</h2>
-                <p id="user-display-name" class="text-slate-400 text-sm font-medium mt-1"></p>
+                <p id="user-display-name" class="text-slate-400 text-sm font-medium"></p>
             </div>
 
-            <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl space-y-8">
+            <div class="bg-white p-6 rounded-[2.5rem] shadow-xl space-y-6">
                 <!-- Camera Container -->
-                <div class="relative overflow-hidden bg-slate-900 rounded-3xl aspect-square max-w-[300px] mx-auto shadow-2xl">
+                <div class="relative overflow-hidden bg-slate-100 rounded-3xl aspect-square max-w-[320px] mx-auto shadow-inner">
                     <video id="video-preview" autoplay playsinline class="w-full h-full object-cover hidden"></video>
                     <img id="captured-photo" class="w-full h-full object-cover hidden" />
-                    <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600">
-                        <i class="fas fa-camera text-5xl mb-2 opacity-30"></i>
-                        <p class="text-[10px] font-bold uppercase tracking-widest opacity-50">Selfie Auth Required</p>
+                    <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
+                        <i class="fas fa-camera text-6xl mb-2 opacity-20"></i>
+                        <p class="text-[10px] font-black uppercase tracking-widest opacity-40">Identity Verification</p>
                     </div>
                     <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-3">
-                        <button onclick="startCamera()" id="start-camera-btn" class="bg-indigo-600 text-white px-8 py-3 rounded-2xl text-xs font-black shadow-xl hover:scale-105 transition">OPEN CAMERA</button>
-                        <button onclick="capturePhoto()" id="capture-btn" class="hidden bg-emerald-500 text-white px-8 py-3 rounded-2xl text-xs font-black shadow-xl hover:scale-105 transition">CAPTURE</button>
+                        <button onclick="startCamera()" id="start-camera-btn" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-xl btn-fancy">OPEN CAMERA</button>
+                        <button onclick="capturePhoto()" id="capture-btn" class="hidden bg-emerald-500 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-xl btn-fancy">SNAP PHOTO</button>
                     </div>
                 </div>
 
                 <!-- GPS Status -->
-                <div id="location-card" class="bg-slate-100 p-5 rounded-2xl text-center border-2 border-dashed border-slate-200">
-                    <div id="location-status" class="text-xs font-black text-slate-400 uppercase tracking-widest italic">
-                        <i class="fas fa-location-arrow animate-bounce mr-2"></i> Initializing GPS...
+                <div id="location-card" class="bg-slate-100 p-4 rounded-2xl text-center border-2 border-dashed border-slate-200">
+                    <div id="location-status" class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <i class="fas fa-circle-notch animate-spin mr-2"></i> Fetching Location...
                     </div>
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="grid grid-cols-2 gap-5 pb-4">
-                    <button id="btn-punch-in" disabled onclick="handlePunch('IN')" class="bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 text-white py-6 rounded-3xl font-black text-xl shadow-lg active:scale-95 transition-all">PUNCH IN</button>
-                    <button id="btn-punch-out" disabled onclick="handlePunch('OUT')" class="bg-rose-600 disabled:bg-slate-200 disabled:text-slate-400 text-white py-6 rounded-3xl font-black text-xl shadow-lg active:scale-95 transition-all">PUNCH OUT</button>
+                <div class="grid grid-cols-2 gap-4 pb-4">
+                    <button id="btn-punch-in" disabled onclick="handlePunch('IN')" class="bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 text-white py-6 rounded-3xl font-black text-xl shadow-lg btn-fancy">PUNCH IN</button>
+                    <button id="btn-punch-out" disabled onclick="handlePunch('OUT')" class="bg-rose-600 disabled:bg-slate-200 disabled:text-slate-400 text-white py-6 rounded-3xl font-black text-xl shadow-lg btn-fancy">PUNCH OUT</button>
                 </div>
             </div>
         </section>
 
         <!-- ADMIN VIEW -->
         <section id="view-admin" class="hidden space-y-6 pb-20">
-            <div class="bg-amber-50 border-2 border-amber-200 p-8 rounded-[2rem] shadow-sm">
-                <div class="flex items-start gap-4 mb-6">
-                    <i class="fas fa-database text-4xl text-amber-500"></i>
-                    <div>
-                        <h3 class="font-black text-amber-900 text-xl">Database Control</h3>
-                        <p class="text-sm text-amber-700">Check for missing tabs or incorrect headers automatically.</p>
-                    </div>
-                </div>
-                <button onclick="adminSyncDatabase()" class="w-full bg-amber-600 text-white p-5 rounded-2xl font-black shadow-xl hover:bg-amber-700 active:scale-95 transition">
+            <div class="bg-indigo-50 border-2 border-indigo-100 p-8 rounded-[2rem] text-center">
+                <i class="fas fa-tools text-3xl text-indigo-600 mb-4"></i>
+                <h3 class="font-black text-indigo-900 text-xl mb-4">Core Management</h3>
+                <button onclick="adminSyncDatabase()" class="w-full bg-indigo-700 text-white p-5 rounded-2xl font-black shadow-xl btn-fancy">
                     BUILD DATABASE STRUCTURE
                 </button>
             </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-6 rounded-2xl shadow-md">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Today's Presence</p>
-                    <p id="stat-present" class="text-3xl font-black text-indigo-700">0</p>
-                </div>
-                <div class="bg-white p-6 rounded-2xl shadow-md">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Stores</p>
-                    <p id="stat-total" class="text-3xl font-black text-slate-700">0</p>
-                </div>
-            </div>
-
-            <!-- Store Form -->
+            
             <div class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
-                <h3 class="font-black text-slate-800 mb-6 flex items-center gap-3">
-                    <i class="fas fa-plus-circle text-indigo-600"></i> Add New Store
-                </h3>
+                <h3 class="font-black text-slate-800 mb-6">Register Store</h3>
                 <form id="form-store" class="space-y-4">
-                    <input type="text" id="store-name" placeholder="Store Name" class="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 transition" required>
+                    <input type="text" id="store-name" placeholder="Store Name" class="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none" required>
                     <div class="grid grid-cols-2 gap-4">
-                        <input type="text" id="store-lat" placeholder="Latitude" class="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 transition" required>
-                        <input type="text" id="store-lng" placeholder="Longitude" class="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 transition" required>
+                        <input type="text" id="store-lat" placeholder="Latitude" class="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none" required>
+                        <input type="text" id="store-lng" placeholder="Longitude" class="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none" required>
                     </div>
-                    <button type="submit" class="w-full bg-indigo-700 text-white p-5 rounded-2xl font-black shadow-lg hover:bg-indigo-800 transition">SAVE STORE</button>
+                    <button type="submit" class="w-full bg-slate-900 text-white p-5 rounded-2xl font-black">SAVE LOCATION</button>
                 </form>
             </div>
         </section>
     </main>
 
     <!-- Toast Notification -->
-    <div id="toast" class="fixed toast bg-slate-900 text-white px-8 py-5 rounded-[2rem] shadow-2xl flex flex-col z-[100] min-w-[320px] border-b-4 border-indigo-500">
+    <div id="toast" class="toast bg-slate-900 text-white px-8 py-5 rounded-3xl shadow-2xl flex flex-col z-[100] min-w-[320px]">
         <span id="toast-title" class="text-[10px] font-black uppercase text-indigo-400 tracking-tighter">System Alert</span>
-        <span id="toast-msg" class="text-sm font-bold mt-1 text-slate-100 leading-tight"></span>
+        <span id="toast-msg" class="text-sm font-bold mt-1 text-slate-100"></span>
     </div>
 
     <canvas id="photo-canvas" width="300" height="300"></canvas>
 
     <script>
         /**
-         * 1. THE CONFIGURATION
-         * -------------------------------------------------------------
+         * 1. CONFIGURATION
          */
         const CONFIG = {
             CLIENT_ID : '747138722746-5moie20nkh3hgpkrhfb4gmvmkiadjbku.apps.googleusercontent.com',
@@ -164,71 +147,66 @@
         };
 
         /**
-         * 2. REPAIR & DIAGNOSTICS LOGIC
-         * -------------------------------------------------------------
+         * 2. STARTUP LOGIC (SAFE INITIALIZATION)
+         */
+        window.onload = () => {
+            // Check for existing token, but don't hang the UI
+            if(appState.token) {
+                showLoader(true, "Restoring Session...");
+                // Set a safety timeout - if Google doesn't respond in 5s, reset UI
+                setTimeout(() => {
+                    if (document.getElementById('view-auth').classList.contains('hidden') === false) {
+                        showLoader(false);
+                    }
+                }, 5000);
+                
+                handleAuthSuccess();
+            }
+            initGIS();
+        };
+
+        /**
+         * 3. API REQUEST HANDLER
          */
         async function sheetsRequest(method, path, body = null) {
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}${path}`;
-            const headers = { 
-                'Authorization': `Bearer ${appState.token}`, 
-                'Content-Type': 'application/json' 
-            };
+            const headers = { 'Authorization': `Bearer ${appState.token}`, 'Content-Type': 'application/json' };
             
             try {
                 const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : null });
                 const data = await res.json();
-                
-                if (!res.ok) {
-                    // EXTRACTING THE REAL GOOGLE ERROR MESSAGE
-                    const gError = data.error ? `${data.error.code}: ${data.error.message}` : "Connection Failed";
-                    throw new Error(gError);
-                }
+                if (!res.ok) throw new Error(data.error ? data.error.message : "API Fail");
                 return data;
             } catch (err) {
-                console.error("Sheets Request Error:", err);
+                console.error(err);
                 throw err;
             }
         }
 
         async function adminSyncDatabase() {
-            showLoader(true);
+            showLoader(true, "Building Database...");
             try {
-                showToast("Checking Spreadsheet connection...", "Diagnostic");
-
-                // Step 1: Check Metadata
                 const meta = await sheetsRequest('GET', '?fields=sheets.properties.title');
                 const existing = meta.sheets.map(s => s.properties.title);
-                
                 const schema = [
                     { name: 'Stores', h: ['ID', 'Name', 'Lat', 'Lng'] },
                     { name: 'Employees', h: ['Email', 'Name', 'StoreName', 'Status'] },
                     { name: 'Attendance', h: ['Timestamp', 'Date', 'Email', 'Action', 'Photo', 'GPS', 'Device'] }
                 ];
-
                 for (const sheet of schema) {
                     if (!existing.includes(sheet.name)) {
-                        showToast(`Creating ${sheet.name} tab...`, "System Build");
-                        // Create Sheet
-                        await sheetsRequest('POST', ':batchUpdate', {
-                            requests: [{ addSheet: { properties: { title: sheet.name } } }]
-                        });
-                        // Add Headers
+                        await sheetsRequest('POST', ':batchUpdate', { requests: [{ addSheet: { properties: { title: sheet.name } } }] });
                         await sheetsRequest('PUT', `/values/${sheet.name}!A1:G1?valueInputOption=RAW`, { values: [sheet.h] });
                     }
                 }
-                alert("SUCCESS: Your database structure is now 100% correct. You can now add stores and staff.");
-                initializeAppData();
+                alert("Database Built Successfully!");
             } catch (e) {
-                // THE ULTIMATE DEBUG ALERT
-                alert(`INITIALIZATION FAILED!\n\nREASON: ${e.message}\n\nWHAT TO CHECK:\n1. Is Spreadsheet ID correct?\n2. Did you Share the sheet with your email as 'Editor'?\n3. Is Sheets API enabled in Cloud Console?`);
-            } finally {
-                showLoader(false);
-            }
+                alert("Error Building DB: " + e.message);
+            } finally { showLoader(false); }
         }
 
         /**
-         * 3. INITIALIZATION & AUTH
-         * -------------------------------------------------------------
+         * 4. AUTHENTICATION (GIS)
          */
         let tokenClient;
         function initGIS() {
@@ -236,35 +214,36 @@
                 client_id: CONFIG.CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/spreadsheets',
                 callback: (resp) => {
-                    if (resp.error) return alert("OAuth Failed: " + resp.error);
+                    if (resp.error) return alert("Auth Error: " + resp.error);
                     appState.token = resp.access_token;
                     localStorage.setItem('access_token', resp.access_token);
                     handleAuthSuccess();
                 }
             });
-            if(appState.token) handleAuthSuccess();
         }
 
         async function handleAuthSuccess() {
-            showLoader(true);
+            showLoader(true, "Verifying User...");
             try {
                 const res = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
                     headers: { Authorization: `Bearer ${appState.token}` }
                 });
+                if (!res.ok) throw new Error("Token Invalid");
+                
                 appState.user = await res.json();
                 localStorage.setItem('user_info', JSON.stringify(appState.user));
 
-                if(appState.user.email === CONFIG.OWNER_EMAIL) {
-                    document.getElementById('admin-toggle-btn').classList.remove('hidden');
-                }
+                // UI Updates
+                if(appState.user.email === CONFIG.OWNER_EMAIL) document.getElementById('admin-toggle-btn').classList.remove('hidden');
                 document.getElementById('logout-btn').classList.remove('hidden');
                 document.getElementById('user-display-name').innerText = appState.user.name;
                 
                 toggleView('attendance');
+                showLoader(true, "Loading Data...");
                 await initializeAppData();
                 startGeofencing();
             } catch (e) {
-                showToast("Login session expired. Logging out.", "Auth Error", true);
+                console.warn("Auth failed, clearing session.");
                 logout();
             } finally { showLoader(false); }
         }
@@ -273,36 +252,36 @@
             try {
                 const storesRaw = await sheetsRequest('GET', '/values/Stores!A2:D');
                 appState.stores = (storesRaw.values || []).map(r => ({ name: r[1], lat: parseFloat(r[2]), lng: parseFloat(r[3]) }));
-                document.getElementById('stat-total').innerText = appState.stores.length;
-            } catch (e) { console.warn("Stores not found yet."); }
+            } catch (e) { console.warn("DB Empty"); }
         }
 
         function login() { tokenClient.requestAccessToken(); }
         function logout() { localStorage.clear(); location.reload(); }
 
         /**
-         * 4. UI UTILS
-         * -------------------------------------------------------------
+         * 5. SYSTEM UTILS
          */
         function toggleView(view) {
             ['auth', 'attendance', 'admin'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
             document.getElementById(`view-${view}`).classList.remove('hidden');
         }
 
-        function showLoader(s) { document.getElementById('loader').classList.toggle('active', s); }
+        function showLoader(show, msg = "Loading...") {
+            const l = document.getElementById('loader');
+            document.getElementById('loader-msg').innerText = msg;
+            l.classList.toggle('active', show);
+        }
 
-        function showToast(m, t="System Alert", e=false) {
+        function showToast(m, t="System Alert") {
             const toast = document.getElementById('toast');
             document.getElementById('toast-title').innerText = t;
             document.getElementById('toast-msg').innerText = m;
             toast.classList.add('active');
-            toast.style.borderBottomColor = e ? '#e11d48' : '#6366f1';
             setTimeout(() => toast.classList.remove('active'), 4000);
         }
 
         /**
-         * 5. ATTENDANCE ACTIONS (GPS/CAM)
-         * -------------------------------------------------------------
+         * 6. CAMERA & GPS
          */
         async function startCamera() {
             try {
@@ -313,38 +292,34 @@
                 document.getElementById('camera-placeholder').classList.add('hidden');
                 document.getElementById('start-camera-btn').classList.add('hidden');
                 document.getElementById('capture-btn').classList.remove('hidden');
-            } catch (e) { alert("Camera access denied."); }
+            } catch (e) { alert("Enable camera permissions."); }
         }
 
         function capturePhoto() {
             const video = document.getElementById('video-preview');
             const canvas = document.getElementById('photo-canvas');
-            const ctx = canvas.getContext('2d');
-            ctx.translate(300, 0); ctx.scale(-1, 1);
-            ctx.drawImage(video, 0, 0, 300, 300);
+            canvas.getContext('2d').drawImage(video, 0, 0, 300, 300);
             appState.photoBase64 = canvas.toDataURL('image/jpeg', 0.6);
-            
             document.getElementById('captured-photo').src = appState.photoBase64;
             document.getElementById('captured-photo').classList.remove('hidden');
             video.classList.add('hidden');
             document.getElementById('capture-btn').classList.add('hidden');
-            
             video.srcObject.getTracks().forEach(t => t.stop());
-            validatePunchState();
+            validatePunch();
         }
 
         function startGeofencing() {
             navigator.geolocation.watchPosition(pos => {
                 appState.currentLat = pos.coords.latitude;
                 appState.currentLng = pos.coords.longitude;
-                document.getElementById('location-status').innerHTML = `<i class="fas fa-check-circle text-emerald-500 mr-2"></i> GPS LOCKED`;
-                validatePunchState();
+                document.getElementById('location-status').innerHTML = `<i class="fas fa-check-circle text-emerald-500 mr-2"></i> LOCATION SECURED`;
+                validatePunch();
             }, err => {
-                document.getElementById('location-status').innerText = "GPS Error: Please enable location.";
-            });
+                document.getElementById('location-status').innerText = "GPS Error: Check permissions.";
+            }, { enableHighAccuracy: true });
         }
 
-        function validatePunchState() {
+        function validatePunch() {
             if(appState.currentLat && appState.photoBase64) {
                 document.getElementById('btn-punch-in').disabled = false;
                 document.getElementById('btn-punch-out').disabled = false;
@@ -352,27 +327,15 @@
         }
 
         async function handlePunch(action) {
-            showLoader(true);
+            showLoader(true, "Saving Punch...");
             try {
-                const row = [
-                    new Date().toLocaleString(),
-                    new Date().toISOString().split('T')[0],
-                    appState.user.email,
-                    action,
-                    appState.photoBase64,
-                    `${appState.currentLat}, ${appState.currentLng}`,
-                    navigator.userAgent.substring(0, 30)
-                ];
-
+                const row = [new Date().toLocaleString(), new Date().toISOString().split('T')[0], appState.user.email, action, appState.photoBase64, `${appState.currentLat},${appState.currentLng}`, "Mobile-Device"];
                 await sheetsRequest('POST', '/values/Attendance!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
-                showToast(`PUNCH ${action} RECORDED`, "Success");
-                location.reload(); 
-            } catch (e) {
-                alert(`PUNCH FAILED: ${e.message}`);
-            } finally { showLoader(false); }
+                showToast("Punch Recorded!", "Success");
+                setTimeout(() => location.reload(), 2000);
+            } catch (e) { alert("Punch Failed: " + e.message); }
+            finally { showLoader(false); }
         }
-
-        window.onload = initGIS;
     </script>
 </body>
 </html>
