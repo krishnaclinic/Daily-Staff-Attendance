@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro-Attend | Hardened Diagnostic Version</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .loading-overlay { display: none; background: rgba(255,255,255,0.9); z-index: 9999; }
+        .loading-overlay.active { display: flex; }
+        #video-preview, #captured-photo { transform: scaleX(-1); border-radius: 1rem; }
+        .toast { transition: all 0.4s ease; transform: translate(-50%, 100px); left: 50%; bottom: 2rem; }
+        .toast.active { transform: translate(-50%, 0); }
+        canvas { display: none; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen pb-20 font-sans">
+
+    <!-- Global Loader -->
+    <div id="loader" class="loading-overlay fixed inset-0 flex flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-indigo-700"></div>
+        <p class="mt-4 font-bold text-indigo-700">Talking to Google Servers...</p>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-indigo-700 text-white p-4 shadow-xl sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-black">PRO-ATTEND</h1>
+            <div class="flex gap-2">
+                <button id="admin-toggle-btn" onclick="toggleView('admin')" class="hidden bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold">ADMIN</button>
+                <button id="logout-btn" onclick="logout()" class="hidden bg-rose-600 px-3 py-1.5 rounded-lg text-xs font-bold">LOGOUT</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4">
+        <!-- AUTH VIEW -->
+        <section id="view-auth" class="mt-20 text-center">
+            <div class="bg-white p-10 rounded-3xl shadow-2xl max-w-sm mx-auto border border-slate-200">
+                <i class="fas fa-fingerprint text-5xl text-indigo-600 mb-6"></i>
+                <h2 class="text-2xl font-bold mb-8">System Login</h2>
+                <button onclick="login()" class="w-full bg-white border-2 border-slate-200 text-slate-700 px-6 py-3 rounded-xl flex items-center justify-center gap-3 font-bold shadow-sm">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/g_logo_500px_clr.png" class="w-5">
+                    Sign in with Google
+                </button>
+            </div>
+        </section>
+
+        <!-- ATTENDANCE VIEW -->
+        <section id="view-attendance" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-lg border-l-8 border-indigo-600">
+                <p class="text-xs font-black text-indigo-500 uppercase">Status</p>
+                <h2 id="shift-status" class="text-2xl font-bold text-slate-800">Ready</h2>
+                <p id="user-display-name" class="text-slate-600 text-sm mt-1"></p>
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl shadow-xl space-y-6">
+                <div class="relative overflow-hidden bg-slate-900 rounded-2xl aspect-square max-w-[280px] mx-auto">
+                    <video id="video-preview" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+                    <img id="captured-photo" class="w-full h-full object-cover hidden" />
+                    <div id="camera-placeholder" class="absolute inset-0 flex items-center justify-center text-slate-500">
+                        <i class="fas fa-camera text-4xl opacity-20"></i>
+                    </div>
+                    <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                        <button onclick="startCamera()" id="start-camera-btn" class="bg-indigo-600 text-white px-6 py-2 rounded-full text-xs font-bold shadow-lg">OPEN CAMERA</button>
+                        <button onclick="capturePhoto()" id="capture-btn" class="hidden bg-emerald-500 text-white px-6 py-2 rounded-full text-xs font-bold shadow-lg">TAKE PHOTO</button>
+                    </div>
+                </div>
+
+                <div id="location-card" class="bg-slate-50 p-4 rounded-xl text-center border-2 border-dashed">
+                    <div id="location-status" class="text-sm font-bold text-slate-500">Waiting for GPS...</div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button id="btn-punch-in" disabled onclick="handlePunch('IN')" class="bg-emerald-500 disabled:bg-slate-200 text-white py-5 rounded-2xl font-black shadow-lg transition-all">IN</button>
+                    <button id="btn-punch-out" disabled onclick="handlePunch('OUT')" class="bg-rose-600 disabled:bg-slate-200 text-white py-5 rounded-2xl font-black shadow-lg transition-all">OUT</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ADMIN VIEW -->
+        <section id="view-admin" class="hidden space-y-6">
+            <div class="bg-orange-50 border-2 border-orange-200 p-6 rounded-2xl shadow-sm">
+                <h3 class="font-black text-orange-800 text-lg mb-1">Sheet Structure Not Found</h3>
+                <p class="text-sm text-orange-700 mb-4">You must initialize the database tabs before starting.</p>
+                <button onclick="adminSyncDatabase()" class="bg-orange-600 text-white px-8 py-3 rounded-xl font-black shadow-xl active:scale-95 transition">
+                    Build Database Structure
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Today's Presence</p>
+                    <p id="stat-present" class="text-2xl font-black text-indigo-700">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Total Staff</p>
+                    <p id="stat-total" class="text-2xl font-black text-slate-700">0</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+                <h3 class="font-bold mb-4">Register Store</h3>
+                <form id="form-store" class="space-y-3">
+                    <input type="text" id="store-name" placeholder="Store Name" class="w-full border p-3 rounded-xl outline-none" required>
+                    <div class="flex gap-2">
+                        <input type="text" id="store-lat" placeholder="Lat" class="w-1/2 border p-3 rounded-xl outline-none" required>
+                        <input type="text" id="store-lng" placeholder="Long" class="w-1/2 border p-3 rounded-xl outline-none" required>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg">Add Store</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed toast bg-slate-800 text-white px-6 py-4 rounded-2xl shadow-2xl flex flex-col z-[100] min-w-[300px]">
+        <span id="toast-title" class="text-[10px] font-black uppercase text-indigo-400 tracking-widest">Notification</span>
+        <span id="toast-msg" class="text-sm font-bold mt-1"></span>
+    </div>
+
+    <canvas id="photo-canvas" width="300" height="300"></canvas>
+
+    <script>
+        /**
+         * 1. CONFIGURATION - PASTE YOUR KEYS HERE
+         */
+        const CONFIG = {
+            CLIENT_ID : '747138722746-5moie20nkh3hgpkrhfb4gmvmkiadjbku.apps.googleusercontent.com',
+            API_KEY : 'AIzaSyA3v6zEyQhRq8X-PW0HG1eqhdmk8wbSg8s',
+            SPREADSHEET_ID : '1UpHxRuvfYWguE78__bYR2sfjxRn6sskqOa5Po7XUoCU',
+            OWNER_EMAIL : 'krishnahospitalsapotra@gmail.com',
+            GEOFENCE_RADIUS_M: 150
+        };
+
+        let appState = {
+            token: localStorage.getItem('access_token'),
+            user: JSON.parse(localStorage.getItem('user_info')),
+            stores: [],
+            employee: null,
+            photoBase64: null,
+            currentLat: null,
+            currentLng: null
+        };
+
+        /**
+         * 2. REPAIR/SYNC LOGIC (Hardened Debugging)
+         */
+        async function sheetsRequest(method, path, body = null) {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}${path}`;
+            const options = {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${appState.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: body ? JSON.stringify(body) : null
+            };
+
+            const response = await fetch(url, options);
+            const data = await response.json();
+
+            if (!response.ok) {
+                // This is where we catch the EXACT error from Google
+                const errorDetail = data.error ? data.error.message : 'Unknown Error';
+                const errorCode = data.error ? data.error.code : response.status;
+                throw new Error(`[Google API ${errorCode}] ${errorDetail}`);
+            }
+            return data;
+        }
+
+        async function adminSyncDatabase() {
+            showLoader(true);
+            try {
+                // Validation: Check if Spreadsheet ID is the placeholder
+                if(CONFIG.SPREADSHEET_ID.includes('YOUR_')) {
+                    throw new Error("Spreadsheet ID is missing in the code config.");
+                }
+
+                showToast("Checking tabs...", "Admin Sync");
+                
+                const meta = await sheetsRequest('GET', '?fields=sheets.properties.title');
+                const existing = meta.sheets.map(s => s.properties.title);
+                
+                const schema = [
+                    { name: 'Stores', h: ['ID', 'Name', 'Lat', 'Lng'] },
+                    { name: 'Employees', h: ['Email', 'Name', 'StoreName', 'Status'] },
+                    { name: 'Attendance', h: ['Timestamp', 'Date', 'Email', 'Action', 'Photo', 'GPS', 'Device'] }
+                ];
+
+                for (const sheet of schema) {
+                    if (!existing.includes(sheet.name)) {
+                        showToast(`Creating ${sheet.name} tab...`, "Sync");
+                        await sheetsRequest('POST', ':batchUpdate', {
+                            requests: [{ addSheet: { properties: { title: sheet.name } } }]
+                        });
+                        await sheetsRequest('PUT', `/values/${sheet.name}!A1:G1?valueInputOption=RAW`, { 
+                            values: [sheet.h] 
+                        });
+                    }
+                }
+                alert("SUCCESS! All database tabs have been created. You can now register stores and staff.");
+                initializeData();
+            } catch (e) {
+                // CATCHING AND DISPLAYING THE DEBUG INFO
+                console.error(e);
+                alert(`CRITICAL ERROR:\n\n${e.message}\n\nREASON: Google is rejecting the connection. Check Spreadsheet ID and Sharing Permissions.`);
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        /**
+         * 3. INITIALIZATION & AUTH
+         */
+        let tokenClient;
+        function initGIS() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CONFIG.CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/spreadsheets',
+                callback: (resp) => {
+                    if (resp.error) return alert("Auth Failed: " + resp.error);
+                    appState.token = resp.access_token;
+                    localStorage.setItem('access_token', resp.access_token);
+                    handleAuthSuccess();
+                }
+            });
+            if(appState.token) handleAuthSuccess();
+        }
+
+        async function handleAuthSuccess() {
+            showLoader(true);
+            try {
+                const res = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
+                    headers: { Authorization: `Bearer ${appState.token}` }
+                });
+                appState.user = await res.json();
+                localStorage.setItem('user_info', JSON.stringify(appState.user));
+
+                if(appState.user.email === CONFIG.OWNER_EMAIL) {
+                    document.getElementById('admin-toggle-btn').classList.remove('hidden');
+                }
+                document.getElementById('logout-btn').classList.remove('hidden');
+                document.getElementById('user-display-name').innerText = appState.user.name;
+                
+                toggleView('attendance');
+                await initializeData();
+                startGeofencing();
+            } catch (e) {
+                showToast("Login session expired.", "Auth", true);
+            } finally { showLoader(false); }
+        }
+
+        async function initializeData() {
+            try {
+                const storesRaw = await sheetsRequest('GET', '/values/Stores!A2:D');
+                appState.stores = (storesRaw.values || []).map(r => ({ name: r[1], lat: parseFloat(r[2]), lng: parseFloat(r[3]) }));
+                
+                const empsRaw = await sheetsRequest('GET', '/values/Employees!A2:D');
+                appState.employee = (empsRaw.values || []).find(r => r[0] === appState.user.email);
+            } catch (e) { console.warn("DB not ready"); }
+        }
+
+        function login() { tokenClient.requestAccessToken(); }
+        function logout() { localStorage.clear(); location.reload(); }
+
+        /**
+         * 4. UI UTILS
+         */
+        function toggleView(view) {
+            ['auth', 'attendance', 'admin'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+        }
+
+        function showLoader(s) { document.getElementById('loader').classList.toggle('active', s); }
+
+        function showToast(m, t="System", e=false) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-title').innerText = t;
+            document.getElementById('toast-msg').innerText = m;
+            toast.classList.add('active');
+            toast.classList.toggle('bg-rose-600', e);
+            toast.classList.toggle('bg-slate-800', !e);
+            setTimeout(() => toast.classList.remove('active'), 4000);
+        }
+
+        // Camera and Punch Logic (Condensed)
+        async function startCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const video = document.getElementById('video-preview');
+            video.srcObject = stream;
+            video.classList.remove('hidden');
+            document.getElementById('camera-placeholder').classList.add('hidden');
+            document.getElementById('start-camera-btn').classList.add('hidden');
+            document.getElementById('capture-btn').classList.remove('hidden');
+        }
+
+        function capturePhoto() {
+            const canvas = document.getElementById('photo-canvas');
+            canvas.getContext('2d').drawImage(document.getElementById('video-preview'), 0, 0, 300, 300);
+            appState.photoBase64 = canvas.toDataURL('image/jpeg', 0.6);
+            document.getElementById('captured-photo').src = appState.photoBase64;
+            document.getElementById('captured-photo').classList.remove('hidden');
+            document.getElementById('video-preview').classList.add('hidden');
+            document.getElementById('capture-btn').classList.add('hidden');
+            validateState();
+        }
+
+        function startGeofencing() {
+            navigator.geolocation.watchPosition(pos => {
+                appState.currentLat = pos.coords.latitude;
+                appState.currentLng = pos.coords.longitude;
+                validateState();
+            });
+        }
+
+        function validateState() {
+            const status = document.getElementById('location-status');
+            status.innerText = `GPS Fixed: ${appState.currentLat.toFixed(4)}, ${appState.currentLng.toFixed(4)}`;
+            if(appState.photoBase64) {
+                document.getElementById('btn-punch-in').disabled = false;
+                document.getElementById('btn-punch-out').disabled = false;
+            }
+        }
+
+        window.onload = initGIS;
+    </script>
+</body>
+</html>
