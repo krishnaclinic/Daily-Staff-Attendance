@@ -3,45 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro-Attend | Hardened Diagnostic Version</title>
+    <title>Pro-Attend | Diagnostic Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .loading-overlay { display: none; background: rgba(255,255,255,0.9); z-index: 9999; }
+        .loading-overlay { display: none; background: rgba(255,255,255,0.95); z-index: 9999; }
         .loading-overlay.active { display: flex; }
-        #video-preview, #captured-photo { transform: scaleX(-1); border-radius: 1rem; }
-        .toast { transition: all 0.4s ease; transform: translate(-50%, 100px); left: 50%; bottom: 2rem; }
+        #video-preview, #captured-photo { transform: scaleX(-1); border-radius: 1rem; border: 4px solid white; }
+        .toast { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translate(-50%, 150%); left: 50%; bottom: 2rem; }
         .toast.active { transform: translate(-50%, 0); }
         canvas { display: none; }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen pb-20 font-sans">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
 
-    <!-- Global Loader -->
+    <!-- Global Fullscreen Loader -->
     <div id="loader" class="loading-overlay fixed inset-0 flex flex-col items-center justify-center">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-indigo-700"></div>
-        <p class="mt-4 font-bold text-indigo-700">Talking to Google Servers...</p>
+        <div class="animate-spin rounded-full h-14 w-14 border-b-4 border-indigo-700"></div>
+        <p class="mt-4 font-black text-indigo-700 tracking-widest uppercase text-xs">Connecting to Google Cloud...</p>
     </div>
 
-    <!-- Header -->
-    <header class="bg-indigo-700 text-white p-4 shadow-xl sticky top-0 z-50">
+    <!-- App Header -->
+    <header class="bg-indigo-700 text-white p-4 shadow-2xl sticky top-0 z-50">
         <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-black">PRO-ATTEND</h1>
+            <h1 class="text-xl font-black italic tracking-tighter">PRO-ATTEND</h1>
             <div class="flex gap-2">
-                <button id="admin-toggle-btn" onclick="toggleView('admin')" class="hidden bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold">ADMIN</button>
-                <button id="logout-btn" onclick="logout()" class="hidden bg-rose-600 px-3 py-1.5 rounded-lg text-xs font-bold">LOGOUT</button>
+                <button id="admin-toggle-btn" onclick="toggleView('admin')" class="hidden bg-white/20 hover:bg-white/40 px-4 py-2 rounded-xl text-xs font-bold transition">ADMIN</button>
+                <button id="logout-btn" onclick="logout()" class="hidden bg-rose-600 px-4 py-2 rounded-xl text-xs font-bold transition">LOGOUT</button>
             </div>
         </div>
     </header>
 
     <main class="max-w-4xl mx-auto p-4">
-        <!-- AUTH VIEW -->
-        <section id="view-auth" class="mt-20 text-center">
-            <div class="bg-white p-10 rounded-3xl shadow-2xl max-w-sm mx-auto border border-slate-200">
-                <i class="fas fa-fingerprint text-5xl text-indigo-600 mb-6"></i>
-                <h2 class="text-2xl font-bold mb-8">System Login</h2>
-                <button onclick="login()" class="w-full bg-white border-2 border-slate-200 text-slate-700 px-6 py-3 rounded-xl flex items-center justify-center gap-3 font-bold shadow-sm">
+        
+        <!-- LOGIN VIEW -->
+        <section id="view-auth" class="mt-24 text-center">
+            <div class="bg-white p-12 rounded-[2rem] shadow-2xl max-w-sm mx-auto border border-slate-200">
+                <div class="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-fingerprint text-4xl text-indigo-600"></i>
+                </div>
+                <h2 class="text-2xl font-black text-slate-800 mb-2">Welcome</h2>
+                <p class="text-slate-400 text-sm mb-10">Sign in with your corporate Google account to continue.</p>
+                <button onclick="login()" class="w-full bg-white border-2 border-slate-200 p-4 rounded-2xl flex items-center justify-center gap-3 font-bold hover:bg-slate-50 transition shadow-sm">
                     <img src="https://www.gstatic.com/images/branding/product/1x/g_logo_500px_clr.png" class="w-5">
                     Sign in with Google
                 </button>
@@ -50,82 +54,97 @@
 
         <!-- ATTENDANCE VIEW -->
         <section id="view-attendance" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-lg border-l-8 border-indigo-600">
-                <p class="text-xs font-black text-indigo-500 uppercase">Status</p>
-                <h2 id="shift-status" class="text-2xl font-bold text-slate-800">Ready</h2>
-                <p id="user-display-name" class="text-slate-600 text-sm mt-1"></p>
+            <div class="bg-white p-6 rounded-3xl shadow-xl border-t-8 border-indigo-600">
+                <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Live Status</p>
+                <h2 id="shift-status" class="text-2xl font-black text-slate-800 tracking-tight">System Ready</h2>
+                <p id="user-display-name" class="text-slate-400 text-sm font-medium mt-1"></p>
             </div>
 
-            <div class="bg-white p-6 rounded-3xl shadow-xl space-y-6">
-                <div class="relative overflow-hidden bg-slate-900 rounded-2xl aspect-square max-w-[280px] mx-auto">
+            <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl space-y-8">
+                <!-- Camera Container -->
+                <div class="relative overflow-hidden bg-slate-900 rounded-3xl aspect-square max-w-[300px] mx-auto shadow-2xl">
                     <video id="video-preview" autoplay playsinline class="w-full h-full object-cover hidden"></video>
                     <img id="captured-photo" class="w-full h-full object-cover hidden" />
-                    <div id="camera-placeholder" class="absolute inset-0 flex items-center justify-center text-slate-500">
-                        <i class="fas fa-camera text-4xl opacity-20"></i>
+                    <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600">
+                        <i class="fas fa-camera text-5xl mb-2 opacity-30"></i>
+                        <p class="text-[10px] font-bold uppercase tracking-widest opacity-50">Selfie Auth Required</p>
                     </div>
-                    <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-                        <button onclick="startCamera()" id="start-camera-btn" class="bg-indigo-600 text-white px-6 py-2 rounded-full text-xs font-bold shadow-lg">OPEN CAMERA</button>
-                        <button onclick="capturePhoto()" id="capture-btn" class="hidden bg-emerald-500 text-white px-6 py-2 rounded-full text-xs font-bold shadow-lg">TAKE PHOTO</button>
+                    <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-3">
+                        <button onclick="startCamera()" id="start-camera-btn" class="bg-indigo-600 text-white px-8 py-3 rounded-2xl text-xs font-black shadow-xl hover:scale-105 transition">OPEN CAMERA</button>
+                        <button onclick="capturePhoto()" id="capture-btn" class="hidden bg-emerald-500 text-white px-8 py-3 rounded-2xl text-xs font-black shadow-xl hover:scale-105 transition">CAPTURE</button>
                     </div>
                 </div>
 
-                <div id="location-card" class="bg-slate-50 p-4 rounded-xl text-center border-2 border-dashed">
-                    <div id="location-status" class="text-sm font-bold text-slate-500">Waiting for GPS...</div>
+                <!-- GPS Status -->
+                <div id="location-card" class="bg-slate-100 p-5 rounded-2xl text-center border-2 border-dashed border-slate-200">
+                    <div id="location-status" class="text-xs font-black text-slate-400 uppercase tracking-widest italic">
+                        <i class="fas fa-location-arrow animate-bounce mr-2"></i> Initializing GPS...
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <button id="btn-punch-in" disabled onclick="handlePunch('IN')" class="bg-emerald-500 disabled:bg-slate-200 text-white py-5 rounded-2xl font-black shadow-lg transition-all">IN</button>
-                    <button id="btn-punch-out" disabled onclick="handlePunch('OUT')" class="bg-rose-600 disabled:bg-slate-200 text-white py-5 rounded-2xl font-black shadow-lg transition-all">OUT</button>
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-2 gap-5 pb-4">
+                    <button id="btn-punch-in" disabled onclick="handlePunch('IN')" class="bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 text-white py-6 rounded-3xl font-black text-xl shadow-lg active:scale-95 transition-all">PUNCH IN</button>
+                    <button id="btn-punch-out" disabled onclick="handlePunch('OUT')" class="bg-rose-600 disabled:bg-slate-200 disabled:text-slate-400 text-white py-6 rounded-3xl font-black text-xl shadow-lg active:scale-95 transition-all">PUNCH OUT</button>
                 </div>
             </div>
         </section>
 
         <!-- ADMIN VIEW -->
-        <section id="view-admin" class="hidden space-y-6">
-            <div class="bg-orange-50 border-2 border-orange-200 p-6 rounded-2xl shadow-sm">
-                <h3 class="font-black text-orange-800 text-lg mb-1">Sheet Structure Not Found</h3>
-                <p class="text-sm text-orange-700 mb-4">You must initialize the database tabs before starting.</p>
-                <button onclick="adminSyncDatabase()" class="bg-orange-600 text-white px-8 py-3 rounded-xl font-black shadow-xl active:scale-95 transition">
-                    Build Database Structure
+        <section id="view-admin" class="hidden space-y-6 pb-20">
+            <div class="bg-amber-50 border-2 border-amber-200 p-8 rounded-[2rem] shadow-sm">
+                <div class="flex items-start gap-4 mb-6">
+                    <i class="fas fa-database text-4xl text-amber-500"></i>
+                    <div>
+                        <h3 class="font-black text-amber-900 text-xl">Database Control</h3>
+                        <p class="text-sm text-amber-700">Check for missing tabs or incorrect headers automatically.</p>
+                    </div>
+                </div>
+                <button onclick="adminSyncDatabase()" class="w-full bg-amber-600 text-white p-5 rounded-2xl font-black shadow-xl hover:bg-amber-700 active:scale-95 transition">
+                    BUILD DATABASE STRUCTURE
                 </button>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Today's Presence</p>
-                    <p id="stat-present" class="text-2xl font-black text-indigo-700">0</p>
+                <div class="bg-white p-6 rounded-2xl shadow-md">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Today's Presence</p>
+                    <p id="stat-present" class="text-3xl font-black text-indigo-700">0</p>
                 </div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Total Staff</p>
-                    <p id="stat-total" class="text-2xl font-black text-slate-700">0</p>
+                <div class="bg-white p-6 rounded-2xl shadow-md">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Stores</p>
+                    <p id="stat-total" class="text-3xl font-black text-slate-700">0</p>
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200">
-                <h3 class="font-bold mb-4">Register Store</h3>
-                <form id="form-store" class="space-y-3">
-                    <input type="text" id="store-name" placeholder="Store Name" class="w-full border p-3 rounded-xl outline-none" required>
-                    <div class="flex gap-2">
-                        <input type="text" id="store-lat" placeholder="Lat" class="w-1/2 border p-3 rounded-xl outline-none" required>
-                        <input type="text" id="store-lng" placeholder="Long" class="w-1/2 border p-3 rounded-xl outline-none" required>
+            <!-- Store Form -->
+            <div class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+                <h3 class="font-black text-slate-800 mb-6 flex items-center gap-3">
+                    <i class="fas fa-plus-circle text-indigo-600"></i> Add New Store
+                </h3>
+                <form id="form-store" class="space-y-4">
+                    <input type="text" id="store-name" placeholder="Store Name" class="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 transition" required>
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" id="store-lat" placeholder="Latitude" class="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 transition" required>
+                        <input type="text" id="store-lng" placeholder="Longitude" class="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 transition" required>
                     </div>
-                    <button type="submit" class="w-full bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg">Add Store</button>
+                    <button type="submit" class="w-full bg-indigo-700 text-white p-5 rounded-2xl font-black shadow-lg hover:bg-indigo-800 transition">SAVE STORE</button>
                 </form>
             </div>
         </section>
     </main>
 
     <!-- Toast Notification -->
-    <div id="toast" class="fixed toast bg-slate-800 text-white px-6 py-4 rounded-2xl shadow-2xl flex flex-col z-[100] min-w-[300px]">
-        <span id="toast-title" class="text-[10px] font-black uppercase text-indigo-400 tracking-widest">Notification</span>
-        <span id="toast-msg" class="text-sm font-bold mt-1"></span>
+    <div id="toast" class="fixed toast bg-slate-900 text-white px-8 py-5 rounded-[2rem] shadow-2xl flex flex-col z-[100] min-w-[320px] border-b-4 border-indigo-500">
+        <span id="toast-title" class="text-[10px] font-black uppercase text-indigo-400 tracking-tighter">System Alert</span>
+        <span id="toast-msg" class="text-sm font-bold mt-1 text-slate-100 leading-tight"></span>
     </div>
 
     <canvas id="photo-canvas" width="300" height="300"></canvas>
 
     <script>
         /**
-         * 1. CONFIGURATION - PASTE YOUR KEYS HERE
+         * 1. THE CONFIGURATION
+         * -------------------------------------------------------------
          */
         const CONFIG = {
             CLIENT_ID : '747138722746-5moie20nkh3hgpkrhfb4gmvmkiadjbku.apps.googleusercontent.com',
@@ -139,48 +158,44 @@
             token: localStorage.getItem('access_token'),
             user: JSON.parse(localStorage.getItem('user_info')),
             stores: [],
-            employee: null,
             photoBase64: null,
             currentLat: null,
             currentLng: null
         };
 
         /**
-         * 2. REPAIR/SYNC LOGIC (Hardened Debugging)
+         * 2. REPAIR & DIAGNOSTICS LOGIC
+         * -------------------------------------------------------------
          */
         async function sheetsRequest(method, path, body = null) {
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}${path}`;
-            const options = {
-                method,
-                headers: {
-                    'Authorization': `Bearer ${appState.token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: body ? JSON.stringify(body) : null
+            const headers = { 
+                'Authorization': `Bearer ${appState.token}`, 
+                'Content-Type': 'application/json' 
             };
-
-            const response = await fetch(url, options);
-            const data = await response.json();
-
-            if (!response.ok) {
-                // This is where we catch the EXACT error from Google
-                const errorDetail = data.error ? data.error.message : 'Unknown Error';
-                const errorCode = data.error ? data.error.code : response.status;
-                throw new Error(`[Google API ${errorCode}] ${errorDetail}`);
+            
+            try {
+                const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : null });
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    // EXTRACTING THE REAL GOOGLE ERROR MESSAGE
+                    const gError = data.error ? `${data.error.code}: ${data.error.message}` : "Connection Failed";
+                    throw new Error(gError);
+                }
+                return data;
+            } catch (err) {
+                console.error("Sheets Request Error:", err);
+                throw err;
             }
-            return data;
         }
 
         async function adminSyncDatabase() {
             showLoader(true);
             try {
-                // Validation: Check if Spreadsheet ID is the placeholder
-                if(CONFIG.SPREADSHEET_ID.includes('YOUR_')) {
-                    throw new Error("Spreadsheet ID is missing in the code config.");
-                }
+                showToast("Checking Spreadsheet connection...", "Diagnostic");
 
-                showToast("Checking tabs...", "Admin Sync");
-                
+                // Step 1: Check Metadata
                 const meta = await sheetsRequest('GET', '?fields=sheets.properties.title');
                 const existing = meta.sheets.map(s => s.properties.title);
                 
@@ -192,21 +207,20 @@
 
                 for (const sheet of schema) {
                     if (!existing.includes(sheet.name)) {
-                        showToast(`Creating ${sheet.name} tab...`, "Sync");
+                        showToast(`Creating ${sheet.name} tab...`, "System Build");
+                        // Create Sheet
                         await sheetsRequest('POST', ':batchUpdate', {
                             requests: [{ addSheet: { properties: { title: sheet.name } } }]
                         });
-                        await sheetsRequest('PUT', `/values/${sheet.name}!A1:G1?valueInputOption=RAW`, { 
-                            values: [sheet.h] 
-                        });
+                        // Add Headers
+                        await sheetsRequest('PUT', `/values/${sheet.name}!A1:G1?valueInputOption=RAW`, { values: [sheet.h] });
                     }
                 }
-                alert("SUCCESS! All database tabs have been created. You can now register stores and staff.");
-                initializeData();
+                alert("SUCCESS: Your database structure is now 100% correct. You can now add stores and staff.");
+                initializeAppData();
             } catch (e) {
-                // CATCHING AND DISPLAYING THE DEBUG INFO
-                console.error(e);
-                alert(`CRITICAL ERROR:\n\n${e.message}\n\nREASON: Google is rejecting the connection. Check Spreadsheet ID and Sharing Permissions.`);
+                // THE ULTIMATE DEBUG ALERT
+                alert(`INITIALIZATION FAILED!\n\nREASON: ${e.message}\n\nWHAT TO CHECK:\n1. Is Spreadsheet ID correct?\n2. Did you Share the sheet with your email as 'Editor'?\n3. Is Sheets API enabled in Cloud Console?`);
             } finally {
                 showLoader(false);
             }
@@ -214,6 +228,7 @@
 
         /**
          * 3. INITIALIZATION & AUTH
+         * -------------------------------------------------------------
          */
         let tokenClient;
         function initGIS() {
@@ -221,7 +236,7 @@
                 client_id: CONFIG.CLIENT_ID,
                 scope: 'https://www.googleapis.com/auth/spreadsheets',
                 callback: (resp) => {
-                    if (resp.error) return alert("Auth Failed: " + resp.error);
+                    if (resp.error) return alert("OAuth Failed: " + resp.error);
                     appState.token = resp.access_token;
                     localStorage.setItem('access_token', resp.access_token);
                     handleAuthSuccess();
@@ -246,21 +261,20 @@
                 document.getElementById('user-display-name').innerText = appState.user.name;
                 
                 toggleView('attendance');
-                await initializeData();
+                await initializeAppData();
                 startGeofencing();
             } catch (e) {
-                showToast("Login session expired.", "Auth", true);
+                showToast("Login session expired. Logging out.", "Auth Error", true);
+                logout();
             } finally { showLoader(false); }
         }
 
-        async function initializeData() {
+        async function initializeAppData() {
             try {
                 const storesRaw = await sheetsRequest('GET', '/values/Stores!A2:D');
                 appState.stores = (storesRaw.values || []).map(r => ({ name: r[1], lat: parseFloat(r[2]), lng: parseFloat(r[3]) }));
-                
-                const empsRaw = await sheetsRequest('GET', '/values/Employees!A2:D');
-                appState.employee = (empsRaw.values || []).find(r => r[0] === appState.user.email);
-            } catch (e) { console.warn("DB not ready"); }
+                document.getElementById('stat-total').innerText = appState.stores.length;
+            } catch (e) { console.warn("Stores not found yet."); }
         }
 
         function login() { tokenClient.requestAccessToken(); }
@@ -268,6 +282,7 @@
 
         /**
          * 4. UI UTILS
+         * -------------------------------------------------------------
          */
         function toggleView(view) {
             ['auth', 'attendance', 'admin'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
@@ -276,53 +291,85 @@
 
         function showLoader(s) { document.getElementById('loader').classList.toggle('active', s); }
 
-        function showToast(m, t="System", e=false) {
+        function showToast(m, t="System Alert", e=false) {
             const toast = document.getElementById('toast');
             document.getElementById('toast-title').innerText = t;
             document.getElementById('toast-msg').innerText = m;
             toast.classList.add('active');
-            toast.classList.toggle('bg-rose-600', e);
-            toast.classList.toggle('bg-slate-800', !e);
+            toast.style.borderBottomColor = e ? '#e11d48' : '#6366f1';
             setTimeout(() => toast.classList.remove('active'), 4000);
         }
 
-        // Camera and Punch Logic (Condensed)
+        /**
+         * 5. ATTENDANCE ACTIONS (GPS/CAM)
+         * -------------------------------------------------------------
+         */
         async function startCamera() {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            const video = document.getElementById('video-preview');
-            video.srcObject = stream;
-            video.classList.remove('hidden');
-            document.getElementById('camera-placeholder').classList.add('hidden');
-            document.getElementById('start-camera-btn').classList.add('hidden');
-            document.getElementById('capture-btn').classList.remove('hidden');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                const video = document.getElementById('video-preview');
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                document.getElementById('camera-placeholder').classList.add('hidden');
+                document.getElementById('start-camera-btn').classList.add('hidden');
+                document.getElementById('capture-btn').classList.remove('hidden');
+            } catch (e) { alert("Camera access denied."); }
         }
 
         function capturePhoto() {
+            const video = document.getElementById('video-preview');
             const canvas = document.getElementById('photo-canvas');
-            canvas.getContext('2d').drawImage(document.getElementById('video-preview'), 0, 0, 300, 300);
+            const ctx = canvas.getContext('2d');
+            ctx.translate(300, 0); ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, 300, 300);
             appState.photoBase64 = canvas.toDataURL('image/jpeg', 0.6);
+            
             document.getElementById('captured-photo').src = appState.photoBase64;
             document.getElementById('captured-photo').classList.remove('hidden');
-            document.getElementById('video-preview').classList.add('hidden');
+            video.classList.add('hidden');
             document.getElementById('capture-btn').classList.add('hidden');
-            validateState();
+            
+            video.srcObject.getTracks().forEach(t => t.stop());
+            validatePunchState();
         }
 
         function startGeofencing() {
             navigator.geolocation.watchPosition(pos => {
                 appState.currentLat = pos.coords.latitude;
                 appState.currentLng = pos.coords.longitude;
-                validateState();
+                document.getElementById('location-status').innerHTML = `<i class="fas fa-check-circle text-emerald-500 mr-2"></i> GPS LOCKED`;
+                validatePunchState();
+            }, err => {
+                document.getElementById('location-status').innerText = "GPS Error: Please enable location.";
             });
         }
 
-        function validateState() {
-            const status = document.getElementById('location-status');
-            status.innerText = `GPS Fixed: ${appState.currentLat.toFixed(4)}, ${appState.currentLng.toFixed(4)}`;
-            if(appState.photoBase64) {
+        function validatePunchState() {
+            if(appState.currentLat && appState.photoBase64) {
                 document.getElementById('btn-punch-in').disabled = false;
                 document.getElementById('btn-punch-out').disabled = false;
             }
+        }
+
+        async function handlePunch(action) {
+            showLoader(true);
+            try {
+                const row = [
+                    new Date().toLocaleString(),
+                    new Date().toISOString().split('T')[0],
+                    appState.user.email,
+                    action,
+                    appState.photoBase64,
+                    `${appState.currentLat}, ${appState.currentLng}`,
+                    navigator.userAgent.substring(0, 30)
+                ];
+
+                await sheetsRequest('POST', '/values/Attendance!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
+                showToast(`PUNCH ${action} RECORDED`, "Success");
+                location.reload(); 
+            } catch (e) {
+                alert(`PUNCH FAILED: ${e.message}`);
+            } finally { showLoader(false); }
         }
 
         window.onload = initGIS;
