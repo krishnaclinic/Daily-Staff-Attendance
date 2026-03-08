@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro-Attend | Advanced Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .loading-overlay { display: none; background: rgba(255,255,255,0.98); z-index: 9999; position: fixed; inset: 0; }
+        .loading-overlay.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #video-preview, #captured-photo { transform: scaleX(-1); border-radius: 1.5rem; border: 4px solid white; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .toast { transition: all 0.4s ease; transform: translate(-50%, 150%); left: 50%; bottom: 2rem; position: fixed; }
+        .toast.active { transform: translate(-50%, 0); }
+        canvas { display: none; }
+        .tab-btn.active { border-bottom: 3px solid #4338ca; color: #4338ca; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
+
+    <!-- Global Loader -->
+    <div id="loader" class="loading-overlay">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-700 mb-4"></div>
+        <p id="loader-msg" class="font-bold text-indigo-700 uppercase tracking-tighter text-xs font-mono">Processing...</p>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-indigo-700 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-black tracking-tighter italic">PRO-ATTEND</h1>
+            <div class="flex gap-2">
+                <button id="admin-toggle-btn" onclick="enterAdminMode()" class="hidden bg-white/20 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/30 transition">
+                    <i class="fas fa-lock mr-1"></i> ADMIN
+                </button>
+                <button id="logout-btn" onclick="logout()" class="hidden bg-rose-600 px-4 py-2 rounded-xl text-xs font-bold">LOGOUT</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4">
+        
+        <!-- LOGIN VIEW -->
+        <section id="view-auth" class="mt-20 text-center">
+            <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-sm mx-auto border border-slate-100">
+                <div class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
+                    <i class="fas fa-fingerprint text-3xl text-indigo-600"></i>
+                </div>
+                <h2 class="text-2xl font-black text-slate-800 mb-2">Staff Portal</h2>
+                <p class="text-slate-400 text-sm mb-8 leading-relaxed">Sign in with Google to start your shift.</p>
+                <button onclick="login()" class="w-full bg-slate-900 text-white p-4 rounded-2xl flex items-center justify-center gap-3 font-bold hover:bg-black transition">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/g_logo_500px_clr.png" class="w-5 bg-white rounded-full p-0.5">
+                    Continue with Google
+                </button>
+            </div>
+        </section>
+
+        <!-- ATTENDANCE VIEW -->
+        <section id="view-attendance" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-3xl shadow-lg border-l-8 border-indigo-600 flex justify-between items-center">
+                <div>
+                    <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Live Status</p>
+                    <h2 id="shift-status" class="text-2xl font-black text-slate-800 tracking-tight">System Ready</h2>
+                    <p id="user-display-name" class="text-slate-400 text-sm font-medium"></p>
+                </div>
+                <div id="gps-indicator" class="w-3 h-3 rounded-full bg-slate-300 animate-pulse"></div>
+            </div>
+
+            <div class="bg-white p-6 rounded-[2.5rem] shadow-xl space-y-6">
+                <div class="relative overflow-hidden bg-slate-100 rounded-3xl aspect-square max-w-[320px] mx-auto shadow-inner border-4 border-white">
+                    <video id="video-preview" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+                    <img id="captured-photo" class="w-full h-full object-cover hidden" />
+                    <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
+                        <i class="fas fa-camera text-6xl mb-2 opacity-20"></i>
+                        <p class="text-[10px] font-black uppercase tracking-widest opacity-40">Identity Check</p>
+                    </div>
+                    <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-3">
+                        <button onclick="startCamera()" id="start-camera-btn" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-xl">OPEN CAMERA</button>
+                        <button onclick="capturePhoto()" id="capture-btn" class="hidden bg-emerald-500 text-white px-6 py-3 rounded-2xl text-xs font-black shadow-xl">SNAP PHOTO</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 pb-4">
+                    <button id="btn-punch-in" disabled onclick="handlePunch('IN')" class="bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 text-white py-6 rounded-3xl font-black text-xl shadow-lg transition-all">PUNCH IN</button>
+                    <button id="btn-punch-out" disabled onclick="handlePunch('OUT')" class="bg-rose-600 disabled:bg-slate-200 disabled:text-slate-400 text-white py-6 rounded-3xl font-black text-xl shadow-lg transition-all">PUNCH OUT</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ADMIN VIEW -->
+        <section id="view-admin" class="hidden space-y-6 pb-20">
+            <!-- Admin Tabs -->
+            <div class="flex border-b border-slate-200 mb-6">
+                <button onclick="setAdminTab('setup')" class="tab-btn px-4 py-2 font-bold text-sm active" id="tab-setup">SETUP</button>
+                <button onclick="setAdminTab('manage-stores')" class="tab-btn px-4 py-2 font-bold text-sm" id="tab-manage-stores">STORES</button>
+                <button onclick="setAdminTab('manage-staff')" class="tab-btn px-4 py-2 font-bold text-sm" id="tab-manage-staff">STAFF</button>
+                <button onclick="setAdminTab('security')" class="tab-btn px-4 py-2 font-bold text-sm" id="tab-security">SECURITY</button>
+            </div>
+
+            <!-- TAB: SETUP -->
+            <div id="admin-setup" class="space-y-6">
+                <div class="bg-indigo-700 text-white p-6 rounded-3xl shadow-xl flex justify-between items-center">
+                    <div>
+                        <h3 class="font-black text-xl">Database Core</h3>
+                        <p class="text-xs opacity-70">Initialize or repair sheet tabs</p>
+                    </div>
+                    <button onclick="adminSyncDatabase()" class="bg-white text-indigo-700 px-4 py-2 rounded-xl text-xs font-black">REPAIR DB</button>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl shadow-md border border-slate-100">
+                    <h3 class="font-black mb-4">Add Store</h3>
+                    <form id="form-store" class="space-y-4">
+                        <input type="text" id="store-name" placeholder="Store Name" class="w-full border p-3 rounded-xl outline-none bg-slate-50" required>
+                        <div class="flex gap-2">
+                            <input type="text" id="store-lat" placeholder="Latitude" class="w-1/2 border p-3 rounded-xl outline-none bg-slate-50" required>
+                            <input type="text" id="store-lng" placeholder="Longitude" class="w-1/2 border p-3 rounded-xl outline-none bg-slate-50" required>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 text-white p-4 rounded-xl font-bold">SAVE STORE</button>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl shadow-md border border-slate-100">
+                    <h3 class="font-black mb-4">Add Employee</h3>
+                    <form id="form-employee" class="space-y-4">
+                        <input type="email" id="emp-email" placeholder="Google Email" class="w-full border p-3 rounded-xl outline-none bg-slate-50" required>
+                        <input type="text" id="emp-name" placeholder="Full Name" class="w-full border p-3 rounded-xl outline-none bg-slate-50" required>
+                        <select id="emp-store-select" class="w-full border p-3 rounded-xl outline-none bg-slate-50" required>
+                            <option value="">Select Store</option>
+                        </select>
+                        <button type="submit" class="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold">SAVE STAFF</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB: MANAGE STORES -->
+            <div id="admin-manage-stores" class="hidden space-y-4">
+                <h3 class="font-black text-slate-800 text-xl">Store Management</h3>
+                <div id="stores-list" class="space-y-3">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+
+            <!-- TAB: MANAGE STAFF -->
+            <div id="admin-manage-staff" class="hidden space-y-4">
+                <h3 class="font-black text-slate-800 text-xl">Staff Management</h3>
+                <div id="staff-list" class="space-y-3">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+
+            <!-- TAB: SECURITY -->
+            <div id="admin-security" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 space-y-6">
+                    <h3 class="font-black text-xl">Security Settings</h3>
+                    
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                        <div>
+                            <p class="font-bold">PIN Protection</p>
+                            <p class="text-xs text-slate-500">Ask for PIN when entering Admin</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="pin-toggle" class="sr-only peer" onchange="updateSecuritySettings()">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-xs font-black uppercase text-slate-400">Admin Access PIN (4 Digits)</label>
+                        <div class="flex gap-4">
+                            <input type="password" id="admin-pin-code" maxlength="4" placeholder="0000" class="flex-1 border-2 p-3 rounded-xl text-center font-black text-xl tracking-widest outline-none bg-slate-50">
+                            <button onclick="updateSecuritySettings()" class="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold">SET PIN</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-slate-900 text-white px-8 py-5 rounded-3xl shadow-2xl flex flex-col z-[100] min-w-[320px]">
+        <span id="toast-title" class="text-[10px] font-black uppercase text-indigo-400 tracking-tighter">System</span>
+        <span id="toast-msg" class="text-sm font-bold mt-1"></span>
+    </div>
+
+    <canvas id="photo-canvas" width="300" height="300"></canvas>
+
+    <script>
+        /**
+         * 1. CONFIGURATION
+         */
+        const CONFIG = {
+            CLIENT_ID : '747138722746-5moie20nkh3hgpkrhfb4gmvmkiadjbku.apps.googleusercontent.com',
+            API_KEY : 'AIzaSyA3v6zEyQhRq8X-PW0HG1eqhdmk8wbSg8s',
+            SPREADSHEET_ID : '1UpHxRuvfYWguE78__bYR2sfjxRn6sskqOa5Po7XUoCU',
+            OWNER_EMAIL : 'krishnahospitalsapotra@gmail.com',
+            GEOFENCE_RADIUS_M: 150
+        };
+
+        let appState = {
+            token: localStorage.getItem('access_token'),
+            user: JSON.parse(localStorage.getItem('user_info')),
+            stores: [],
+            staff: [],
+            settings: { pin: '0000', pinEnabled: false },
+            photoBase64: null,
+            currentLat: null,
+            currentLng: null
+        };
+
+        /**
+         * 2. API HANDLER
+         */
+        async function sheetsRequest(method, path, body = null) {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}${path}`;
+            const headers = { 'Authorization': `Bearer ${appState.token}`, 'Content-Type': 'application/json' };
+            try {
+                const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : null });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || "API Error");
+                return data;
+            } catch (err) { console.error(err); throw err; }
+        }
+
+        /**
+         * 3. SECURITY & ADMIN PROTECTION
+         */
+        async function enterAdminMode() {
+            if (appState.settings.pinEnabled) {
+                const pin = prompt("Enter 4-Digit Admin PIN:");
+                if (pin === appState.settings.pin) {
+                    toggleView('admin');
+                } else {
+                    alert("Incorrect PIN Access Denied.");
+                }
+            } else {
+                toggleView('admin');
+            }
+        }
+
+        async function updateSecuritySettings() {
+            showLoader(true, "Updating Security...");
+            const newPin = document.getElementById('admin-pin-code').value;
+            const isEnabled = document.getElementById('pin-toggle').checked;
+            
+            try {
+                const values = [["PIN_ENABLED", isEnabled], ["ADMIN_PIN", newPin]];
+                await sheetsRequest('PUT', '/values/Settings!A1:B2?valueInputOption=RAW', { values });
+                appState.settings.pin = newPin;
+                appState.settings.pinEnabled = isEnabled;
+                showToast("Security Updated!");
+            } catch (e) { alert("Update failed: " + e.message); }
+            finally { showLoader(false); }
+        }
+
+        /**
+         * 4. DATA MANAGEMENT (DELETE & LISTS)
+         */
+        async function refreshManagementLists() {
+            // Stores
+            const sRes = await sheetsRequest('GET', '/values/Stores!A2:D');
+            appState.stores = (sRes.values || []).map((r, i) => ({ id: r[0], name: r[1], lat: r[2], lng: r[3], rowIdx: i + 2 }));
+            
+            const storesList = document.getElementById('stores-list');
+            storesList.innerHTML = appState.stores.map(s => `
+                <div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm border border-slate-100">
+                    <div>
+                        <p class="font-black text-slate-800">${s.name}</p>
+                        <p class="text-[10px] text-slate-400">${s.lat}, ${s.lng}</p>
+                    </div>
+                    <button onclick="deleteRow('Stores', ${s.rowIdx})" class="text-rose-500 p-2"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('');
+
+            // Staff
+            const eRes = await sheetsRequest('GET', '/values/Employees!A2:D');
+            appState.staff = (eRes.values || []).map((r, i) => ({ email: r[0], name: r[1], store: r[2], rowIdx: i + 2 }));
+            
+            const staffList = document.getElementById('staff-list');
+            staffList.innerHTML = appState.staff.map(e => `
+                <div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm border border-slate-100">
+                    <div>
+                        <p class="font-black text-slate-800">${e.name}</p>
+                        <p class="text-[10px] text-slate-400">${e.email} • ${e.store}</p>
+                    </div>
+                    <button onclick="deleteRow('Employees', ${e.rowIdx})" class="text-rose-500 p-2"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('');
+
+            // Dropdown update
+            document.getElementById('emp-store-select').innerHTML = `<option value="">Select Store</option>` + 
+                appState.stores.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+        }
+
+        async function deleteRow(sheetName, rowIndex) {
+            if (!confirm("Delete this entry?")) return;
+            showLoader(true, "Deleting...");
+            try {
+                // Get Sheet ID
+                const meta = await sheetsRequest('GET', '?fields=sheets.properties');
+                const sheetId = meta.sheets.find(s => s.properties.title === sheetName).properties.sheetId;
+
+                const body = {
+                    requests: [{
+                        deleteDimension: {
+                            range: {
+                                sheetId: sheetId,
+                                dimension: "ROWS",
+                                startIndex: rowIndex - 1,
+                                endIndex: rowIndex
+                            }
+                        }
+                    }]
+                };
+                await sheetsRequest('POST', ':batchUpdate', body);
+                await refreshManagementLists();
+                showToast("Deleted Successfully");
+            } catch (e) { alert("Delete failed: " + e.message); }
+            finally { showLoader(false); }
+        }
+
+        /**
+         * 5. INITIALIZATION & SYNC
+         */
+        async function adminSyncDatabase() {
+            showLoader(true, "Syncing Tabs...");
+            try {
+                const meta = await sheetsRequest('GET', '?fields=sheets.properties.title');
+                const existing = meta.sheets.map(s => s.properties.title);
+                const schema = [
+                    { name: 'Stores', h: ['ID', 'Name', 'Lat', 'Lng'] },
+                    { name: 'Employees', h: ['Email', 'Name', 'StoreName', 'Status'] },
+                    { name: 'Attendance', h: ['Timestamp', 'Date', 'Email', 'Action', 'Photo', 'GPS', 'Device'] },
+                    { name: 'Settings', h: ['Key', 'Value'] }
+                ];
+                for (const sheet of schema) {
+                    if (!existing.includes(sheet.name)) {
+                        await sheetsRequest('POST', ':batchUpdate', { requests: [{ addSheet: { properties: { title: sheet.name } } }] });
+                        await sheetsRequest('PUT', `/values/${sheet.name}!A1:G1?valueInputOption=RAW`, { values: [sheet.h] });
+                    }
+                }
+                alert("Database Ready!");
+                location.reload();
+            } catch (e) { alert("DB Sync Error: " + e.message); }
+            finally { showLoader(false); }
+        }
+
+        async function initializeAppData() {
+            try {
+                // Fetch Settings
+                const setRes = await sheetsRequest('GET', '/values/Settings!A1:B2');
+                if (setRes.values) {
+                    appState.settings.pinEnabled = setRes.values[0][1] === 'true';
+                    appState.settings.pin = setRes.values[1][1];
+                    document.getElementById('pin-toggle').checked = appState.settings.pinEnabled;
+                    document.getElementById('admin-pin-code').value = appState.settings.pin;
+                }
+                await refreshManagementLists();
+            } catch (e) { console.warn("Initialize incomplete"); }
+        }
+
+        /**
+         * 6. SYSTEM BOILERPLATE (Core Logic)
+         */
+        window.onload = () => { if(appState.token) handleAuthSuccess(); initGIS(); };
+
+        let tokenClient;
+        function initGIS() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CONFIG.CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/spreadsheets',
+                callback: (resp) => { appState.token = resp.access_token; localStorage.setItem('access_token', resp.access_token); handleAuthSuccess(); }
+            });
+        }
+
+        async function handleAuthSuccess() {
+            showLoader(true);
+            try {
+                const res = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, { headers: { Authorization: `Bearer ${appState.token}` } });
+                appState.user = await res.json();
+                localStorage.setItem('user_info', JSON.stringify(appState.user));
+                if(appState.user.email === CONFIG.OWNER_EMAIL) document.getElementById('admin-toggle-btn').classList.remove('hidden');
+                document.getElementById('logout-btn').classList.remove('hidden');
+                document.getElementById('user-display-name').innerText = appState.user.name;
+                toggleView('attendance');
+                await initializeAppData();
+                startGeofencing();
+            } catch (e) { logout(); } finally { showLoader(false); }
+        }
+
+        // Add Store Form
+        document.getElementById('form-store').onsubmit = async (e) => {
+            e.preventDefault();
+            showLoader(true, "Saving Store...");
+            const row = [Date.now(), document.getElementById('store-name').value, document.getElementById('store-lat').value, document.getElementById('store-lng').value];
+            await sheetsRequest('POST', '/values/Stores!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
+            e.target.reset();
+            await refreshManagementLists();
+            showLoader(false);
+            showToast("Store Added");
+        };
+
+        // Add Employee Form
+        document.getElementById('form-employee').onsubmit = async (e) => {
+            e.preventDefault();
+            showLoader(true, "Saving Staff...");
+            const row = [document.getElementById('emp-email').value, document.getElementById('emp-name').value, document.getElementById('emp-store-select').value, "Active"];
+            await sheetsRequest('POST', '/values/Employees!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
+            e.target.reset();
+            await refreshManagementLists();
+            showLoader(false);
+            showToast("Employee Added");
+        };
+
+        function setAdminTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            ['setup', 'manage-stores', 'manage-staff', 'security'].forEach(t => document.getElementById('admin-' + t).classList.add('hidden'));
+            document.getElementById('admin-' + tabId).classList.remove('hidden');
+        }
+
+        function toggleView(view) {
+            ['auth', 'attendance', 'admin'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+        }
+
+        function showLoader(s, m="Loading...") { document.getElementById('loader-msg').innerText = m; document.getElementById('loader').classList.toggle('active', s); }
+        function showToast(m) { const t = document.getElementById('toast'); document.getElementById('toast-msg').innerText = m; t.classList.add('active'); setTimeout(() => t.classList.remove('active'), 3000); }
+        function login() { tokenClient.requestAccessToken(); }
+        function logout() { localStorage.clear(); location.reload(); }
+
+        // Camera/GPS Logic (Condensed from previous version)
+        async function startCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            const v = document.getElementById('video-preview');
+            v.srcObject = stream; v.classList.remove('hidden');
+            document.getElementById('camera-placeholder').classList.add('hidden');
+            document.getElementById('start-camera-btn').classList.add('hidden');
+            document.getElementById('capture-btn').classList.remove('hidden');
+        }
+        function capturePhoto() {
+            const v = document.getElementById('video-preview');
+            const c = document.getElementById('photo-canvas');
+            c.getContext('2d').drawImage(v, 0, 0, 300, 300);
+            appState.photoBase64 = c.toDataURL('image/jpeg', 0.6);
+            document.getElementById('captured-photo').src = appState.photoBase64;
+            document.getElementById('captured-photo').classList.remove('hidden');
+            v.classList.add('hidden'); document.getElementById('capture-btn').classList.add('hidden');
+            v.srcObject.getTracks().forEach(t => t.stop()); validatePunch();
+        }
+        function startGeofencing() {
+            navigator.geolocation.watchPosition(pos => {
+                appState.currentLat = pos.coords.latitude; appState.currentLng = pos.coords.longitude;
+                document.getElementById('gps-indicator').classList.replace('bg-slate-300', 'bg-emerald-500');
+                validatePunch();
+            }, null, { enableHighAccuracy: true });
+        }
+        function validatePunch() { if(appState.currentLat && appState.photoBase64) { document.getElementById('btn-punch-in').disabled = false; document.getElementById('btn-punch-out').disabled = false; } }
+        async function handlePunch(a) {
+            showLoader(true, "Punching...");
+            const row = [new Date().toLocaleString(), new Date().toISOString().split('T')[0], appState.user.email, a, appState.photoBase64, `${appState.currentLat},${appState.currentLng}`, "PRO-DEVICE"];
+            await sheetsRequest('POST', '/values/Attendance!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
+            showToast("Punch Success!"); location.reload();
+        }
+    </script>
+</body>
+</html>
