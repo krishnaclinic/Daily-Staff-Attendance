@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro-Attend | Professional v4.1</title>
+    <title>Pro-Attend | Professional v4.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -16,7 +15,7 @@
         .locked-screen { display: none; position: fixed; inset: 0; background: white; z-index: 10000; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; }
         canvas { display: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .btn-gradient { background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%); }
+        .step-locked { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900">
@@ -27,29 +26,23 @@
         <p id="loader-msg" class="font-bold text-indigo-700 uppercase tracking-tighter text-[10px]">Processing...</p>
     </div>
 
-    <!-- LOCKOUT: UNREGISTERED USER -->
+    <!-- LOCKOUT: UNREGISTERED -->
     <div id="lockout-screen" class="locked-screen">
-        <div class="w-24 h-24 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-6 animate-pulse">
-            <i class="fas fa-user-lock text-4xl"></i>
-        </div>
-        <h2 class="text-2xl font-black text-slate-800 mb-2">ACCESS DENIED</h2>
-        <p class="text-slate-500 text-sm max-w-xs mb-8 italic text-center uppercase tracking-tight">You are not a registered user. Contact your store manager.</p>
+        <div class="w-24 h-24 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-6"><i class="fas fa-user-lock text-4xl"></i></div>
+        <h2 class="text-2xl font-black text-slate-800">ACCESS DENIED</h2>
+        <p class="text-slate-500 text-sm max-w-xs mb-8 uppercase tracking-tighter italic">Not a registered user. Contact manager.</p>
         <button onclick="logout()" class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black shadow-xl">LOGOUT</button>
     </div>
 
     <!-- HEADER -->
     <header class="bg-indigo-700 text-white p-4 shadow-xl sticky top-0 z-50">
         <div class="max-w-4xl mx-auto flex justify-between items-center">
-            <h1 onclick="goHome()" class="text-xl font-black tracking-tighter italic cursor-pointer select-none flex items-center gap-2">
+            <h1 onclick="goHome()" class="text-xl font-black tracking-tighter italic cursor-pointer flex items-center gap-2 select-none">
                 <i class="fas fa-fingerprint"></i> PRO-ATTEND
             </h1>
             <div class="flex gap-2">
-                <button id="admin-toggle-btn" onclick="enterAdminMode()" class="hidden bg-white/20 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/30 transition">
-                    <i class="fas fa-user-shield text-sm"></i>
-                </button>
-                <button id="logout-btn" onclick="logout()" class="hidden bg-rose-600 px-4 py-2 rounded-xl text-xs font-bold shadow-md">
-                    <i class="fas fa-power-off"></i>
-                </button>
+                <button id="admin-toggle-btn" onclick="enterAdminMode()" class="hidden bg-white/20 px-4 py-2 rounded-xl text-xs font-bold"><i class="fas fa-user-shield"></i></button>
+                <button onclick="logout()" class="bg-rose-600 px-4 py-2 rounded-xl text-xs font-bold"><i class="fas fa-power-off"></i></button>
             </div>
         </div>
     </header>
@@ -59,68 +52,69 @@
         <!-- VIEW: LOGIN -->
         <section id="view-auth" class="mt-20 text-center animate-fade-in">
             <div class="bg-white p-12 rounded-[3rem] shadow-2xl max-w-sm mx-auto border border-slate-100">
-                <div class="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-8 transform rotate-3">
-                    <i class="fas fa-id-card-clip text-4xl text-indigo-600"></i>
-                </div>
-                <h2 class="text-2xl font-black text-slate-800 mb-2 tracking-tighter">SECURE LOGIN</h2>
-                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-12">Attendance Gateway</p>
-                
-                <button onclick="login()" class="w-full bg-indigo-700 text-white p-5 rounded-2xl flex items-center justify-center gap-4 font-black hover:bg-indigo-800 transition active:scale-95 shadow-2xl border-b-4 border-indigo-900">
-                    <i class="fab fa-google text-xl"></i> SIGN IN WITH GOOGLE
+                <div class="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-8 transform rotate-3"><i class="fas fa-id-card-clip text-4xl text-indigo-600"></i></div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tighter uppercase mb-12">Portal Access</h2>
+                <button onclick="login()" class="w-full bg-indigo-700 text-white p-5 rounded-2xl flex items-center justify-center gap-4 font-black shadow-2xl border-b-4 border-indigo-900">
+                    <i class="fab fa-google"></i> SIGN IN WITH GOOGLE
                 </button>
-                <p class="text-[10px] text-slate-400 mt-8 italic">Authorized Corporate Accounts Only</p>
             </div>
         </section>
 
         <!-- VIEW: ATTENDANCE (HOME) -->
         <section id="view-attendance" class="hidden space-y-6">
+            <!-- User Bar -->
             <div class="bg-white p-6 rounded-3xl shadow-lg border-l-8 border-indigo-600 flex justify-between items-center">
                 <div>
-                    <h2 id="shift-status" class="text-2xl font-black text-slate-800 tracking-tight italic uppercase">System Ready</h2>
-                    <p id="user-display-name" class="text-slate-400 text-sm font-medium mt-1 flex items-center gap-2 italic">
-                        <i class="fas fa-circle-user text-indigo-400"></i> Authenticating...
+                    <h2 id="shift-status" class="text-2xl font-black text-slate-800 tracking-tight italic uppercase leading-none mb-2 text-indigo-700">Ready</h2>
+                    <p id="user-display-name" class="text-slate-400 text-sm font-medium flex items-center gap-2">
+                        <i class="fas fa-circle-user text-indigo-300"></i> Checking Session...
                     </p>
                 </div>
                 <div id="status-dot" class="w-4 h-4 rounded-full bg-slate-200 animate-pulse border-2 border-white shadow-sm"></div>
             </div>
 
+            <!-- Validation Steps Container -->
             <div class="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-6 text-center border border-slate-100">
-                <!-- Camera Container -->
-                <div class="relative overflow-hidden bg-slate-900 rounded-3xl aspect-square max-w-[320px] mx-auto border-4 border-white shadow-2xl flex items-center justify-center">
-                    <video id="video-preview" autoplay playsinline class="hidden"></video>
-                    <img id="captured-photo" class="hidden" />
-                    <div id="camera-placeholder" class="text-slate-500 flex flex-col items-center">
-                        <i class="fas fa-camera text-6xl mb-3 opacity-30"></i>
-                        <span class="text-[10px] font-black uppercase tracking-widest opacity-40">Identity Check</span>
-                    </div>
-                    <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-3 px-6">
-                        <button onclick="startCamera()" id="start-camera-btn" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black shadow-xl w-full flex items-center justify-center gap-2">
-                            <i class="fas fa-video"></i> OPEN CAMERA
-                        </button>
-                        <button onclick="capturePhoto()" id="capture-btn" class="hidden bg-emerald-500 text-white px-6 py-3 rounded-2xl text-[10px] font-black shadow-xl w-full flex items-center justify-center gap-2">
-                            <i class="fas fa-camera"></i> CAPTURE
-                        </button>
-                    </div>
-                </div>
-
-                <!-- GPS and Distance Status -->
-                <div id="location-card" class="bg-slate-50 p-5 rounded-2xl border-2 border-dashed border-slate-200">
+                
+                <!-- STEP 1: GPS Status -->
+                <div id="location-card" class="bg-slate-50 p-5 rounded-3xl border-2 border-dashed border-slate-200">
                     <div class="flex flex-col items-center gap-1">
                         <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <i class="fas fa-location-crosshairs animate-spin" id="gps-icon"></i> <span id="location-text">Detecting GPS...</span>
+                            <i class="fas fa-location-crosshairs animate-spin" id="gps-icon"></i> <span id="location-text">Detecting Location...</span>
                         </div>
-                        <div id="distance-info" class="text-sm font-black text-indigo-700 hidden"></div>
+                        <div id="distance-info" class="text-sm font-black text-indigo-700 mt-1 hidden"></div>
                     </div>
                 </div>
 
-                <!-- Hardened Logic Messenger -->
-                <div id="punch-error" class="hidden text-rose-600 text-[10px] font-black uppercase p-4 bg-rose-50 rounded-2xl border-2 border-rose-100 flex items-center justify-center gap-2">
-                    <i class="fas fa-triangle-exclamation"></i> <span id="punch-error-text"></span>
+                <!-- STEP 2: Camera Identity -->
+                <div id="camera-section" class="step-locked">
+                    <div class="relative overflow-hidden bg-slate-900 rounded-3xl aspect-square max-w-[300px] mx-auto border-4 border-white shadow-2xl flex items-center justify-center mb-6">
+                        <video id="video-preview" autoplay playsinline class="hidden"></video>
+                        <img id="captured-photo" class="hidden" />
+                        <div id="camera-placeholder" class="text-slate-500 flex flex-col items-center">
+                            <i class="fas fa-camera text-6xl mb-3 opacity-30"></i>
+                            <span class="text-[10px] font-black uppercase tracking-widest opacity-40 italic">Identity Verification</span>
+                        </div>
+                        <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-3 px-6">
+                            <button onclick="startCamera()" id="start-camera-btn" class="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black shadow-xl w-full flex items-center justify-center gap-2">
+                                <i class="fas fa-video"></i> OPEN CAMERA
+                            </button>
+                            <button onclick="capturePhoto()" id="capture-btn" class="hidden bg-emerald-500 text-white px-6 py-3 rounded-2xl text-[10px] font-black shadow-xl w-full flex items-center justify-center gap-2 animate-pulse">
+                                <i class="fas fa-camera"></i> CAPTURE
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <button id="btn-punch-in" disabled onclick="handlePunch('IN')" class="bg-emerald-500 disabled:bg-slate-100 disabled:text-slate-300 text-white py-6 rounded-3xl font-black text-xl shadow-lg active:scale-95 transition-all">PUNCH IN</button>
-                    <button id="btn-punch-out" disabled onclick="handlePunch('OUT')" class="bg-rose-600 disabled:bg-slate-100 disabled:text-slate-300 text-white py-6 rounded-3xl font-black text-xl shadow-lg active:scale-95 transition-all">PUNCH OUT</button>
+                <!-- STEP 3: Action Buttons -->
+                <div id="action-section" class="grid grid-cols-2 gap-4 step-locked">
+                    <button id="btn-punch-in" onclick="handlePunch('IN')" class="bg-emerald-500 text-white py-6 rounded-3xl font-black text-xl shadow-lg active:scale-95 transition-all uppercase border-b-4 border-emerald-700">Punch In</button>
+                    <button id="btn-punch-out" onclick="handlePunch('OUT')" class="bg-rose-600 text-white py-6 rounded-3xl font-black text-xl shadow-lg active:scale-95 transition-all uppercase border-b-4 border-rose-800">Punch Out</button>
+                </div>
+
+                <!-- Global Error Messenger -->
+                <div id="punch-error" class="hidden text-rose-600 text-[10px] font-black uppercase p-4 bg-rose-50 rounded-2xl border-2 border-rose-100 flex items-center justify-center gap-2 mt-4">
+                    <i class="fas fa-circle-exclamation"></i> <span id="punch-error-text"></span>
                 </div>
             </div>
         </section>
@@ -134,89 +128,64 @@
                 <button onclick="setAdminTab('setup')" class="tab-btn px-4 py-4 font-black text-[10px] uppercase tracking-widest" id="tab-setup">System</button>
             </div>
 
-            <!-- DASHBOARD -->
+            <!-- ADMIN TABS (SAME CONTENT AS PREVIOUS) -->
             <div id="admin-dash" class="space-y-6">
-                <div class="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 space-y-4">
-                    <h3 class="font-black text-xs text-indigo-700 uppercase tracking-widest"><i class="fas fa-filter mr-1"></i> Data Filters</h3>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[9px] font-black text-slate-400 ml-1 uppercase">From</label>
-                            <input type="date" id="filter-start" class="border-2 p-3 rounded-2xl text-xs bg-slate-50 outline-none focus:border-indigo-500">
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[9px] font-black text-slate-400 ml-1 uppercase">To</label>
-                            <input type="date" id="filter-end" class="border-2 p-3 rounded-2xl text-xs bg-slate-50 outline-none focus:border-indigo-500">
-                        </div>
-                        <select id="filter-store" class="col-span-2 border-2 p-4 rounded-2xl text-xs font-black bg-slate-50 outline-none focus:border-indigo-500"></select>
-                        <button onclick="loadDashboardReport()" class="col-span-2 bg-indigo-700 text-white p-5 rounded-2xl font-black shadow-lg hover:bg-indigo-800 active:scale-95 transition flex items-center justify-center gap-2">
-                            <i class="fas fa-chart-line"></i> GENERATE ANALYTICS
-                        </button>
-                    </div>
+                <div class="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 grid grid-cols-2 gap-3">
+                    <input type="date" id="filter-start" class="border-2 p-3 rounded-2xl text-xs bg-slate-50 outline-none">
+                    <input type="date" id="filter-end" class="border-2 p-3 rounded-2xl text-xs bg-slate-50 outline-none">
+                    <select id="filter-store" class="col-span-2 border-2 p-4 rounded-2xl text-xs font-black bg-slate-50"></select>
+                    <button onclick="loadDashboardReport()" class="col-span-2 bg-indigo-700 text-white p-5 rounded-2xl font-black shadow-lg">GENERATE ANALYTICS</button>
                 </div>
                 <div id="report-results" class="space-y-3 pb-20"></div>
             </div>
 
-            <!-- STAFF TAB -->
             <div id="admin-staff" class="hidden space-y-6">
                 <div class="bg-white p-6 rounded-3xl shadow-xl border border-slate-100">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Viewing Organization</p>
-                    <select id="manage-staff-filter" onchange="renderStaffList()" class="w-full border-2 p-4 rounded-2xl bg-indigo-50 font-black outline-none shadow-sm text-indigo-700"></select>
+                    <select id="manage-staff-filter" onchange="renderStaffList()" class="w-full border-2 p-4 rounded-2xl bg-indigo-50 font-black text-indigo-700"></select>
                 </div>
                 <form id="form-employee" class="bg-white p-8 rounded-3xl shadow-xl space-y-4 border border-slate-100">
-                    <h3 id="staff-form-title" class="font-black text-sm text-slate-800 uppercase italic">Onboard Personnel</h3>
+                    <h3 id="staff-form-title" class="font-black text-sm text-slate-800 uppercase italic">Onboard Staff</h3>
                     <input type="hidden" id="staff-row-idx">
-                    <div class="space-y-3">
-                        <input type="email" id="emp-email" placeholder="Google Email" class="w-full border-2 p-4 rounded-2xl outline-none bg-slate-50 focus:border-emerald-500 transition" required>
-                        <input type="text" id="emp-name" placeholder="Full Name" class="w-full border-2 p-4 rounded-2xl outline-none bg-slate-50 focus:border-emerald-500 transition" required>
-                        <select id="emp-store-select" class="w-full border-2 p-4 rounded-2xl outline-none bg-slate-50 focus:border-emerald-500 transition" required></select>
-                    </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="submit" id="staff-save-btn" class="flex-1 bg-emerald-600 text-white p-4 rounded-2xl font-black shadow-lg">SAVE STAFF</button>
-                        <button type="button" id="staff-cancel-btn" onclick="resetStaffForm()" class="hidden bg-slate-200 text-slate-600 p-4 rounded-2xl font-black">CANCEL</button>
+                    <input type="email" id="emp-email" placeholder="Email" class="w-full border-2 p-4 rounded-2xl outline-none bg-slate-50" required>
+                    <input type="text" id="emp-name" placeholder="Full Name" class="w-full border-2 p-4 rounded-2xl outline-none bg-slate-50" required>
+                    <select id="emp-store-select" class="w-full border-2 p-4 rounded-2xl outline-none bg-slate-50" required></select>
+                    <div class="flex gap-2">
+                        <button type="submit" id="staff-save-btn" class="flex-1 bg-emerald-600 text-white p-4 rounded-2xl font-black shadow-lg uppercase text-xs">Save</button>
+                        <button type="button" id="staff-cancel-btn" onclick="resetStaffForm()" class="hidden bg-slate-200 p-4 rounded-2xl font-black text-xs">Cancel</button>
                     </div>
                 </form>
                 <div id="staff-list" class="space-y-2"></div>
             </div>
 
-            <!-- STORES TAB -->
             <div id="admin-stores" class="hidden space-y-6">
                 <form id="form-store" class="bg-white p-8 rounded-3xl shadow-xl space-y-4 border border-slate-100">
-                    <h3 id="store-form-title" class="font-black text-sm text-slate-800 uppercase italic">Manage Locations</h3>
+                    <h3 id="store-form-title" class="font-black text-sm uppercase italic">Location Management</h3>
                     <input type="hidden" id="store-row-idx">
                     <input type="text" id="store-name" placeholder="Store Name" class="w-full border-2 p-4 rounded-2xl outline-none bg-slate-50" required>
                     <div class="grid grid-cols-2 gap-3">
-                        <input type="text" id="store-lat" placeholder="Latitude" class="border-2 p-4 rounded-2xl bg-slate-50 outline-none">
-                        <input type="text" id="store-lng" placeholder="Longitude" class="border-2 p-4 rounded-2xl bg-slate-50 outline-none">
-                        <input type="number" id="store-range" placeholder="Range (Meters)" class="col-span-2 border-2 p-4 rounded-2xl bg-slate-50 outline-none font-bold" value="150" required>
+                        <input type="text" id="store-lat" placeholder="Lat" class="border-2 p-4 rounded-2xl bg-slate-50 outline-none" required>
+                        <input type="text" id="store-lng" placeholder="Lng" class="border-2 p-4 rounded-2xl bg-slate-50 outline-none" required>
+                        <input type="number" id="store-range" placeholder="Range (m)" class="col-span-2 border-2 p-4 rounded-2xl bg-slate-50 font-bold" value="150" required>
                     </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="submit" id="store-save-btn" class="flex-1 bg-indigo-700 text-white p-4 rounded-2xl font-black shadow-lg italic tracking-tighter">SAVE STORE</button>
-                        <button type="button" id="store-cancel-btn" onclick="resetStoreForm()" class="hidden bg-slate-200 text-slate-600 p-4 rounded-2xl font-black">CANCEL</button>
+                    <div class="flex gap-2">
+                        <button type="submit" id="store-save-btn" class="flex-1 bg-indigo-700 text-white p-4 rounded-2xl font-black shadow-lg">SAVE STORE</button>
+                        <button type="button" id="store-cancel-btn" onclick="resetStoreForm()" class="hidden bg-slate-200 p-4 rounded-2xl font-black">CANCEL</button>
                     </div>
                 </form>
                 <div id="stores-list" class="space-y-2"></div>
             </div>
 
-            <!-- SETUP TAB -->
             <div id="admin-setup" class="hidden space-y-6">
-                <div class="bg-white p-10 rounded-[3rem] shadow-2xl text-center border border-slate-100">
-                    <div id="db-status-badge" class="inline-block px-5 py-2 rounded-full text-[10px] font-black mb-6 uppercase tracking-widest shadow-sm">Syncing...</div>
-                    <button id="btn-repair-db" disabled onclick="adminSyncDatabase()" class="w-full bg-slate-100 text-slate-300 p-6 rounded-[2rem] font-black italic shadow-inner">
-                        <i class="fas fa-database mr-2"></i> REPAIR DATABASE
-                    </button>
-                    
-                    <div class="mt-12 p-8 bg-slate-50 rounded-[2.5rem] text-left border-2 border-slate-200 shadow-inner">
-                        <div class="flex items-center justify-between mb-6">
-                            <span class="text-xs font-black uppercase text-slate-500 tracking-tighter">Admin PIN Protection</span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="pin-toggle" onchange="updateSecuritySettings()" class="sr-only peer">
-                                <div class="w-11 h-6 bg-slate-200 rounded-full peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-                            </label>
+                <div class="bg-white p-10 rounded-[3rem] shadow-2xl text-center">
+                    <div id="db-status-badge" class="inline-block px-5 py-2 rounded-full text-[10px] font-black mb-6 uppercase tracking-widest bg-slate-50">SYNCING...</div>
+                    <button id="btn-repair-db" disabled onclick="adminSyncDatabase()" class="w-full bg-slate-100 text-slate-300 p-6 rounded-3xl font-black italic">REPAIR DATABASE</button>
+                    <div class="mt-8 p-8 bg-slate-50 rounded-[2.5rem] text-left border-2 border-slate-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-xs font-black uppercase text-slate-400">PIN Protection</span>
+                            <input type="checkbox" id="pin-toggle" onchange="updateSecuritySettings()" class="w-6 h-6">
                         </div>
-                        <input type="password" id="admin-pin-code" maxlength="4" placeholder="••••" class="w-full border-2 p-5 rounded-2xl text-center font-black text-4xl tracking-[0.6em] outline-none shadow-sm focus:border-indigo-400 transition">
-                        <button onclick="updateSecuritySettings()" class="w-full mt-5 bg-indigo-700 text-white p-4 rounded-2xl font-black text-[10px] uppercase shadow-xl active:scale-95 transition">
-                            Save PIN Configuration
-                        </button>
+                        <input type="password" id="admin-pin-code" maxlength="4" placeholder="••••" class="w-full border-2 p-5 rounded-2xl text-center font-black text-4xl tracking-[0.5em] outline-none bg-white shadow-sm">
+                        <button onclick="updateSecuritySettings()" class="w-full mt-5 bg-indigo-700 text-white p-4 rounded-2xl font-black text-xs uppercase shadow-xl">SAVE SETTINGS</button>
                     </div>
                 </div>
             </div>
@@ -224,20 +193,19 @@
     </main>
 
     <div id="toast" class="fixed toast bg-slate-900 text-white px-8 py-5 rounded-[2rem] shadow-2xl flex flex-col min-w-[320px] border-b-4 border-indigo-600 bottom-10 left-1/2 -translate-x-1/2 z-[1000] opacity-0 pointer-events-none transition-all duration-300">
-        <span id="toast-title" class="text-[9px] font-black uppercase text-indigo-400">Security Trace</span>
+        <span id="toast-title" class="text-[9px] font-black uppercase text-indigo-400 tracking-tighter">System Alert</span>
         <span id="toast-msg" class="text-xs font-bold mt-1 text-slate-200 leading-tight italic"></span>
     </div>
 
     <canvas id="photo-canvas" width="300" height="300"></canvas>
 
     <script>
-        /** 1. CONFIGURATION */
+        /** 1. CONFIGURATION (Replace placeholders) */
         const CONFIG = {
             CLIENT_ID : '747138722746-5moie20nkh3hgpkrhfb4gmvmkiadjbku.apps.googleusercontent.com',
             API_KEY : 'AIzaSyA3v6zEyQhRq8X-PW0HG1eqhdmk8wbSg8s',
             SPREADSHEET_ID : '1UpHxRuvfYWguE78__bYR2sfjxRn6sskqOa5Po7XUoCU',
-            OWNER_EMAIL : 'krishnahospitalsapotra@gmail.com',
-            GEOFENCE_RADIUS_M: 150
+            OWNER_EMAIL : 'krishnahospitalsapotra@gmail.com'
         };
 
         let appState = {
@@ -245,10 +213,11 @@
             user: JSON.parse(localStorage.getItem('user_info')),
             stores: [], staff: [], empData: null,
             settings: { pin: '0000', pinEnabled: false },
-            photoBase64: null, curLat: null, curLng: null, distance: null
+            photoBase64: null, curLat: null, curLng: null, dist: null,
+            locationFixed: false
         };
 
-        /** 2. LOGIN FLOW (STABLE OAUTH2) */
+        /** 2. LOGIN & AUTH HANDSHAKE */
         let tokenClient;
         window.onload = () => {
             initGIS();
@@ -279,12 +248,8 @@
                 appState.user = await res.json();
                 localStorage.setItem('user_info', JSON.stringify(appState.user));
 
-                document.getElementById('user-display-name').innerHTML = `<i class="fas fa-check-circle text-emerald-400 mr-2"></i> ${appState.user.name || appState.user.email}`;
-                document.getElementById('logout-btn').classList.remove('hidden');
-
-                if (appState.user.email.toLowerCase() === CONFIG.OWNER_EMAIL.toLowerCase()) {
-                    document.getElementById('admin-toggle-btn').classList.remove('hidden');
-                }
+                document.getElementById('user-display-name').innerHTML = `<i class="fas fa-check-circle text-emerald-400 mr-1"></i> ${appState.user.name || appState.user.email}`;
+                if (appState.user.email.toLowerCase() === CONFIG.OWNER_EMAIL.toLowerCase()) document.getElementById('admin-toggle-btn').classList.remove('hidden');
 
                 toggleView('attendance');
                 await initializeData();
@@ -305,12 +270,9 @@
                 if (setRes.values) {
                     appState.settings.pinEnabled = setRes.values[0][1] === 'true';
                     appState.settings.pin = setRes.values[1][1];
-                    document.getElementById('pin-toggle').checked = appState.settings.pinEnabled;
-                    document.getElementById('admin-pin-code').value = appState.settings.pin;
                 }
 
                 appState.empData = appState.staff.find(s => s.email === appState.user.email.toLowerCase());
-
                 if (appState.user.email.toLowerCase() !== CONFIG.OWNER_EMAIL.toLowerCase() && !appState.empData) {
                     document.getElementById('lockout-screen').style.display = 'flex';
                     return;
@@ -318,80 +280,133 @@
 
                 populateUI();
                 await checkShiftStatus();
+                // START GPS ONLY AFTER DATA IS LOADED
                 startGeofencing();
             } catch (e) { checkDatabaseHealth(); }
         }
 
-        /** 3. GEOFENCING & VALIDATION */
+        /** 3. GEOFENCING & SEQUENTIAL UNLOCKING */
         function startGeofencing() {
-            if (!navigator.geolocation) return;
+            if (!navigator.geolocation) { updateLocUI("GPS NOT SUPPORTED", "fa-ban"); return; }
+            
+            // Force a fast initial check
+            navigator.geolocation.getCurrentPosition(pos => {
+                handleLocationUpdate(pos);
+            }, () => {}, { enableHighAccuracy: true, timeout: 5000 });
+
+            // Maintain persistent watch
             navigator.geolocation.watchPosition(pos => {
-                appState.curLat = pos.coords.latitude;
-                appState.curLng = pos.coords.longitude;
-                validateProximity();
-            }, () => updateLocUI("PERMISSION DENIED", "fa-ban text-rose-500"), { enableHighAccuracy: true });
+                handleLocationUpdate(pos);
+            }, () => {
+                updateLocUI("ENABLE GPS PERMISSION", "fa-triangle-exclamation text-rose-500");
+            }, { enableHighAccuracy: true });
+        }
+
+        function handleLocationUpdate(pos) {
+            appState.curLat = pos.coords.latitude;
+            appState.curLng = pos.coords.longitude;
+            appState.locationFixed = true;
+            validateProximity();
         }
 
         function validateProximity() {
-            if (!appState.empData) return;
+            if (!appState.empData || !appState.locationFixed) return;
             const store = appState.stores.find(s => s.name === appState.empData.store);
-            if (!store) { updateLocUI("STORE UNKNOWN", "fa-circle-question"); return; }
+            if (!store) { updateLocUI("STORE LOCATION MISSING", "fa-circle-question"); return; }
 
             const d = getDist(appState.curLat, appState.curLng, store.lat, store.lng);
-            appState.distance = d;
+            appState.dist = d;
             
             const info = document.getElementById('distance-info');
-            info.innerText = `${d.toFixed(1)}m from Store`;
+            info.innerText = `${d.toFixed(1)}m from ${store.name}`;
             info.classList.remove('hidden');
 
-            if (d <= store.range) {
-                updateLocUI("IN RANGE", "fa-circle-check text-emerald-500");
+            const isAtStore = d <= store.range;
+            if (isAtStore) {
+                updateLocUI("IN PUNCH RANGE", "fa-circle-check text-emerald-500");
                 document.getElementById('status-dot').className = "w-4 h-4 rounded-full bg-emerald-500 shadow-lg animate-pulse border-2 border-white";
+                // STEP 2: Unlock Camera
+                document.getElementById('camera-section').classList.remove('step-locked');
             } else {
-                updateLocUI("OUT OF RANGE", "fa-location-dot text-rose-500");
+                updateLocUI("OUTSIDE RANGE", "fa-location-dot text-rose-500");
                 document.getElementById('status-dot').className = "w-4 h-4 rounded-full bg-rose-500 border-2 border-white";
+                // RE-LOCK STEPS
+                document.getElementById('camera-section').classList.add('step-locked');
+                document.getElementById('action-section').classList.add('step-locked');
             }
-            validatePunchState();
+            validateFinalPunchState();
         }
 
-        function getDist(lat1, lon1, lat2, lon2) {
-            const R = 6371000;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
-        function validatePunchState() {
+        function validateFinalPunchState() {
             const err = document.getElementById('punch-error');
             const errTxt = document.getElementById('punch-error-text');
             const store = appState.stores.find(s => s.name === appState.empData?.store);
             
             let m = "";
-            if (!appState.photoBase64) m = "Identity Capture Required";
-            else if (!appState.curLat) m = "Waiting for GPS Precision";
-            else if (appState.distance > (store?.range || 150)) m = "You are outside store geofence";
+            if (!appState.locationFixed) m = "Establishing Satellite Lock...";
+            else if (appState.dist > (store?.range || 150)) m = "Movement Required: Enter Store Geofence";
+            else if (!appState.photoBase64) m = "Action Required: Capture Selfie";
 
             if (m !== "") {
                 errTxt.innerText = m; err.classList.remove('hidden');
-                document.getElementById('btn-punch-in').disabled = true;
-                document.getElementById('btn-punch-out').disabled = true;
+                document.getElementById('action-section').classList.add('step-locked');
             } else {
                 err.classList.add('hidden');
-                document.getElementById('btn-punch-in').disabled = false;
-                document.getElementById('btn-punch-out').disabled = false;
+                // STEP 3: Unlock Punch
+                document.getElementById('action-section').classList.remove('step-locked');
             }
         }
 
-        /** 4. CRUD OPERATIONS (EDIT/SAVE) */
+        /** 4. CAMERA IDENTITY */
+        async function startCamera() {
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                const v = document.getElementById('video-preview'); v.srcObject = s; 
+                v.classList.remove('hidden'); v.style.display = 'block';
+                document.getElementById('camera-placeholder').classList.add('hidden');
+                document.getElementById('start-camera-btn').classList.add('hidden');
+                document.getElementById('capture-btn').classList.remove('hidden');
+            } catch (e) { alert("Camera Permission Required"); }
+        }
+
+        function capturePhoto() {
+            const v = document.getElementById('video-preview'); const c = document.getElementById('photo-canvas');
+            c.getContext('2d').drawImage(v, 0, 0, 300, 300);
+            appState.photoBase64 = c.toDataURL('image/jpeg', 0.6);
+            document.getElementById('captured-photo').src = appState.photoBase64;
+            document.getElementById('captured-photo').classList.remove('hidden');
+            v.classList.add('hidden'); document.getElementById('capture-btn').classList.add('hidden');
+            v.srcObject.getTracks().forEach(t => t.stop());
+            validateFinalPunchState();
+        }
+
+        /** 5. API & ATTENDANCE CORE */
+        async function handlePunch(action) {
+            showLoader(true, "Logging Transaction...");
+            try {
+                const row = [new Date().toLocaleString(), new Date().toISOString().split('T')[0], appState.user.email, action, appState.photoBase64, `${appState.curLat},${appState.curLng}`, "SECURE-CLIENT"];
+                await sheetsRequest('POST', '/values/Attendance!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
+                showToast("Punch Success!"); setTimeout(() => location.reload(), 2000);
+            } catch (e) { alert("Network Error"); showLoader(false); }
+        }
+
+        async function sheetsRequest(method, path, body = null) {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}${path}`;
+            const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${appState.token}`, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : null });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || "Sync Error");
+            return data;
+        }
+
+        /** 6. ADMIN CRUD ACTIONS */
         document.getElementById('form-store').onsubmit = async (e) => {
-            e.preventDefault(); showLoader(true, "Syncing Store...");
+            e.preventDefault(); showLoader(true, "Updating Store...");
             const row = [Date.now(), document.getElementById('store-name').value, document.getElementById('store-lat').value, document.getElementById('store-lng').value, document.getElementById('store-range').value];
             const idx = document.getElementById('store-row-idx').value;
             try {
                 if (idx) await sheetsRequest('PUT', `/values/Stores!A${idx}:E${idx}?valueInputOption=USER_ENTERED`, { values: [row] });
                 else await sheetsRequest('POST', '/values/Stores!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
-                resetStoreForm(); await initializeData(); showToast("Store Location Updated");
+                resetStoreForm(); await initializeData();
             } catch (e) { alert(e.message); } finally { showLoader(false); }
         };
 
@@ -408,19 +423,19 @@
         }
 
         document.getElementById('form-employee').onsubmit = async (e) => {
-            e.preventDefault(); showLoader(true, "Syncing Staff...");
+            e.preventDefault(); showLoader(true, "Updating Staff...");
             const row = [document.getElementById('emp-email').value, document.getElementById('emp-name').value, document.getElementById('emp-store-select').value, 'Active'];
             const idx = document.getElementById('staff-row-idx').value;
             try {
                 if (idx) await sheetsRequest('PUT', `/values/Employees!A${idx}:D${idx}?valueInputOption=USER_ENTERED`, { values: [row] });
                 else await sheetsRequest('POST', '/values/Employees!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
-                resetStaffForm(); await initializeData(); showToast("Staff Directory Updated");
+                resetStaffForm(); await initializeData();
             } catch (e) { alert(e.message); } finally { showLoader(false); }
         };
 
         function editStaff(idx) {
             const s = appState.staff.find(st => st.rowIdx === idx);
-            document.getElementById('staff-form-title').innerText = "Modify Personnel";
+            document.getElementById('staff-form-title').innerText = "Edit Employee";
             document.getElementById('emp-email').value = s.email;
             document.getElementById('emp-name').value = s.name;
             document.getElementById('emp-store-select').value = s.store;
@@ -429,158 +444,90 @@
             window.scrollTo(0,0);
         }
 
-        /** 5. ANALYTICS & REPORTS */
+        /** 7. UI BOILERPLATE */
+        function goHome() { toggleView('attendance'); }
+        function logout() { localStorage.clear(); location.reload(); }
+        function showLoader(s, m) { document.getElementById('loader-msg').innerText = m; document.getElementById('loader').classList.toggle('active', s); }
+        function toggleView(v) { ['auth', 'attendance', 'admin'].forEach(x => document.getElementById(`view-${x}`).classList.add('hidden')); document.getElementById(`view-${v}`).classList.remove('hidden'); }
+        function updateLocUI(t, i) { document.getElementById('location-text').innerText = t; document.getElementById('gps-icon').className = "fas " + i; }
+        function showToast(m) { const t = document.getElementById('toast'); document.getElementById('toast-msg').innerText = m; t.style.opacity = "1"; t.style.pointerEvents = "auto"; setTimeout(() => { t.style.opacity = "0"; t.style.pointerEvents = "none"; }, 4000); }
+        function setAdminTab(t) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tab-'+t).classList.add('active'); ['dash', 'stores', 'staff', 'setup'].forEach(x => document.getElementById('admin-'+x).classList.add('hidden')); document.getElementById('admin-'+t).classList.remove('hidden'); if(t==='dash') loadDashboardReport(); }
+        
+        function populateUI() {
+            const opt = appState.stores.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+            document.getElementById('emp-store-select').innerHTML = `<option value="">Select Location</option>` + opt;
+            document.getElementById('manage-staff-filter').innerHTML = `<option value="all">Display All Staff</option>` + opt;
+            document.getElementById('filter-store').innerHTML = `<option value="">All Stores</option>` + opt;
+            renderStaffList(); renderStoresList(); checkDatabaseHealth();
+        }
+
+        function getDist(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
         async function loadDashboardReport() {
-            showLoader(true, "Extracting Records...");
+            showLoader(true, "Compiling Logs...");
             const results = document.getElementById('report-results');
             try {
                 const res = await sheetsRequest('GET', '/values/Attendance!A2:G');
                 const start = document.getElementById('filter-start').value;
                 const end = document.getElementById('filter-end').value;
                 const store = document.getElementById('filter-store').value;
-                
-                let logs = (res.values || []).map(r => ({ ts: r[0], date: r[1], email: r[2].toLowerCase(), action: r[3] }));
+                let logs = (res.values || []).map(r => ({ ts: r[0], date: r[1], email: r[2], action: r[3] }));
                 if (start) logs = logs.filter(l => l.date >= start);
                 if (end) logs = logs.filter(l => l.date <= end);
-                if (store) {
-                    const storeEmails = appState.staff.filter(s => s.store === store).map(s => s.email);
-                    logs = logs.filter(l => storeEmails.includes(l.email));
-                }
-
-                results.innerHTML = `
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-indigo-700 text-white p-6 rounded-[2rem] text-center shadow-lg"><p class="text-[8px] font-black opacity-60 uppercase">Entries</p><p class="text-2xl font-black">${logs.length}</p></div>
-                        <div class="bg-slate-900 text-white p-6 rounded-[2rem] text-center shadow-lg"><p class="text-[8px] font-black opacity-60 uppercase">Active</p><p class="text-2xl font-black">${new Set(logs.map(l=>l.email)).size}</p></div>
-                    </div>
-                ` + logs.slice().reverse().map(l => `
-                    <div class="bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm">
-                        <div class="text-[10px] font-black uppercase text-slate-800">${l.email.split('@')[0]}<p class="text-[8px] text-slate-400 font-normal italic">${l.date} @ ${l.ts.split(', ')[1]}</p></div>
-                        <span class="px-3 py-1 rounded-full text-[8px] font-black ${l.action === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">${l.action}</span>
-                    </div>
-                `).join('');
-            } catch (e) { results.innerHTML = `<p class="text-center text-rose-500 font-bold uppercase italic p-10">No Data Synchronized</p>`; }
-            finally { showLoader(false); }
+                if (store) { const storeEmails = appState.staff.filter(s => s.store === store).map(s => s.email); logs = logs.filter(l => storeEmails.includes(l.email.toLowerCase())); }
+                results.innerHTML = `<div class="grid grid-cols-2 gap-4"><div class="bg-indigo-700 text-white p-4 rounded-3xl text-center"><p class="text-[8px] font-black uppercase">Hits</p><p class="text-xl font-black">${logs.length}</p></div><div class="bg-slate-900 text-white p-4 rounded-3xl text-center"><p class="text-[8px] font-black uppercase">Staff</p><p class="text-xl font-black">${new Set(logs.map(l=>l.email)).size}</p></div></div>` + logs.slice().reverse().map(l => `<div class="bg-white p-4 rounded-2xl border flex justify-between items-center"><div class="text-[10px] font-black">${l.email.split('@')[0]}<p class="text-[8px] text-slate-400 font-normal italic">${l.date} @ ${l.ts.split(', ')[1]}</p></div><span class="px-2 py-1 rounded-full text-[8px] font-black ${l.action === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">${l.action}</span></div>`).join('');
+            } catch (e) { results.innerHTML = `<p class="text-center italic uppercase font-black text-rose-500 p-10">Sync Error</p>`; } finally { showLoader(false); }
         }
 
-        /** 6. CAMERA & SYSTEM CORE */
-        async function startCamera() {
-            try {
-                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                const v = document.getElementById('video-preview'); v.srcObject = s; v.classList.remove('hidden');
-                document.getElementById('camera-placeholder').classList.add('hidden');
-                document.getElementById('start-camera-btn').classList.add('hidden');
-                document.getElementById('capture-btn').classList.remove('hidden');
-            } catch (e) { showToast("Camera Access Denied"); }
-        }
-
-        function capturePhoto() {
-            const v = document.getElementById('video-preview'); const c = document.getElementById('photo-canvas');
-            c.getContext('2d').drawImage(v, 0, 0, 300, 300);
-            appState.photoBase64 = c.toDataURL('image/jpeg', 0.6);
-            document.getElementById('captured-photo').src = appState.photoBase64;
-            document.getElementById('captured-photo').classList.remove('hidden');
-            v.classList.add('hidden'); document.getElementById('capture-btn').classList.add('hidden');
-            v.srcObject.getTracks().forEach(t => t.stop()); validatePunchState();
-        }
-
-        async function handlePunch(action) {
-            showLoader(true, "Writing to Database...");
-            try {
-                const row = [new Date().toLocaleString(), new Date().toISOString().split('T')[0], appState.user.email, action, appState.photoBase64, `${appState.curLat},${appState.curLng}`, "PRO-CLIENT"];
-                await sheetsRequest('POST', '/values/Attendance!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
-                showToast(`Punched ${action} Successful`);
-                setTimeout(() => location.reload(), 2000);
-            } catch (e) { alert("Network Error: " + e.message); showLoader(false); }
-        }
-
-        async function sheetsRequest(method, path, body = null) {
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}${path}`;
-            const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${appState.token}`, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : null });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message || "Sheets API Sync Error");
-            return data;
-        }
-
-        /** 7. UI BOILERPLATE */
-        function goHome() { toggleView('attendance'); }
-        function logout() { localStorage.clear(); location.reload(); }
-        function showLoader(s, m) { document.getElementById('loader-msg').innerText = m; document.getElementById('loader').classList.toggle('active', s); }
-        function toggleView(v) { ['auth', 'attendance', 'admin'].forEach(x => document.getElementById(`view-${x}`).classList.add('hidden')); document.getElementById(`view-${v}`).classList.remove('hidden'); }
-        function setAdminTab(t) { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tab-'+t).classList.add('active'); ['dash', 'stores', 'staff', 'setup'].forEach(x => document.getElementById('admin-'+x).classList.add('hidden')); document.getElementById('admin-'+t).classList.remove('hidden'); if(t==='dash') loadDashboardReport(); }
-        function updateLocUI(t, i) { document.getElementById('location-text').innerText = t; document.getElementById('gps-icon').className = "fas " + i; }
-        function showToast(m) { const t = document.getElementById('toast'); document.getElementById('toast-msg').innerText = m; t.style.opacity = "1"; t.style.pointerEvents = "auto"; setTimeout(() => { t.style.opacity = "0"; t.style.pointerEvents = "none"; }, 4000); }
-        function populateUI() {
-            const opt = appState.stores.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
-            document.getElementById('emp-store-select').innerHTML = `<option value="">Select Location</option>` + opt;
-            document.getElementById('manage-staff-filter').innerHTML = `<option value="all">Display All Personnel</option>` + opt;
-            document.getElementById('filter-store').innerHTML = `<option value="">All Registered Stores</option>` + opt;
-            renderStaffList(); renderStoresList(); checkDatabaseHealth();
-        }
         async function checkShiftStatus() {
             try {
                 const today = new Date().toISOString().split('T')[0];
                 const res = await sheetsRequest('GET', '/values/Attendance!A2:D');
                 const logs = (res.values || []).filter(r => r[1] === today && r[2].toLowerCase() === appState.user.email.toLowerCase());
-                if (logs.length > 0) document.getElementById('shift-status').innerHTML = `<i class="fas fa-clock text-indigo-400 mr-2"></i> ${logs[logs.length-1][3]} RECORDED`;
+                if (logs.length > 0) document.getElementById('shift-status').innerHTML = `${logs[logs.length-1][3]} RECORDED`;
             } catch (e) {}
         }
-        async function enterAdminMode() { 
-            if (appState.settings.pinEnabled) {
-                const pin = prompt("Enter 4-Digit Admin PIN");
-                if (pin === appState.settings.pin) setAdminTab('dash'), toggleView('admin');
-                else alert("Access Blocked: Invalid PIN");
-            } else { setAdminTab('dash'), toggleView('admin'); }
-        }
-        async function updateSecuritySettings() {
-            showLoader(true, "Updating Security...");
-            const pin = document.getElementById('admin-pin-code').value; const enabled = document.getElementById('pin-toggle').checked;
-            try { await sheetsRequest('PUT', '/values/Settings!A1:B2?valueInputOption=RAW', { values: [['PIN_ENABLED', enabled], ['ADMIN_PIN', pin]] }); appState.settings = { pin, pinEnabled: enabled }; showToast("Admin Security Configuration Saved"); } catch (e) { alert(e.message); } finally { showLoader(false); }
-        }
+
         function renderStaffList() {
             const f = document.getElementById('manage-staff-filter').value;
             const d = f === 'all' ? appState.staff : appState.staff.filter(s => s.store === f);
-            document.getElementById('staff-list').innerHTML = d.map(s => `<div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm border border-slate-100"><div class="text-[10px] font-black uppercase text-slate-800">${s.name}<p class="text-[8px] text-slate-400 font-normal italic">${s.email} • ${s.store}</p></div><div class="flex gap-1"><button onclick="editStaff(${s.rowIdx})" class="text-indigo-600 p-2"><i class="fas fa-pen-to-square"></i></button><button onclick="deleteRow('Employees', ${s.rowIdx})" class="text-rose-500 p-2"><i class="fas fa-trash"></i></button></div></div>`).join('');
+            document.getElementById('staff-list').innerHTML = d.map(s => `<div class="bg-white p-4 rounded-2xl flex justify-between items-center border shadow-sm"><div class="text-[10px] font-black uppercase">${s.name}<p class="text-[8px] font-normal italic text-slate-400">${s.email} • ${s.store}</p></div><div class="flex gap-2"><button onclick="editStaff(${s.rowIdx})" class="text-indigo-600 p-2"><i class="fas fa-edit"></i></button><button onclick="deleteRow('Employees', ${s.rowIdx})" class="text-rose-500 p-2"><i class="fas fa-trash"></i></button></div></div>`).join('');
         }
+
         function renderStoresList() {
-            document.getElementById('stores-list').innerHTML = appState.stores.map(s => `<div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm border border-slate-100"><div class="text-[10px] font-black uppercase text-slate-800">${s.name}<p class="text-[8px] text-slate-400 font-normal italic">Gate: ${s.range}m • ${s.lat}, ${s.lng}</p></div><div class="flex gap-1"><button onclick="editStore(${s.rowIdx})" class="text-indigo-600 p-2"><i class="fas fa-pen-to-square"></i></button><button onclick="deleteRow('Stores', ${s.rowIdx})" class="text-rose-500 p-2"><i class="fas fa-trash"></i></button></div></div>`).join('');
+            document.getElementById('stores-list').innerHTML = appState.stores.map(s => `<div class="bg-white p-4 rounded-2xl flex justify-between items-center border shadow-sm"><div class="text-[10px] font-black uppercase">${s.name}<p class="text-[8px] font-normal italic text-slate-400">Fence: ${s.range}m • ${s.lat}, ${s.lng}</p></div><div class="flex gap-2"><button onclick="editStore(${s.rowIdx})" class="text-indigo-600 p-2"><i class="fas fa-edit"></i></button><button onclick="deleteRow('Stores', ${s.rowIdx})" class="text-rose-500 p-2"><i class="fas fa-trash"></i></button></div></div>`).join('');
         }
+
         async function deleteRow(sheet, idx) {
-            if (!confirm("Remove permanently?")) return; showLoader(true, "Deleting...");
-            try {
-                const meta = await sheetsRequest('GET', '?fields=sheets.properties');
-                const id = meta.sheets.find(s => s.properties.title === sheet).properties.sheetId;
-                await sheetsRequest('POST', ':batchUpdate', { requests: [{ deleteDimension: { range: { sheetId: id, dimension: "ROWS", startIndex: idx - 1, endIndex: idx } } }] });
-                await initializeData();
-            } catch (e) { alert(e.message); } finally { showLoader(false); }
+            if (!confirm("Confirm Deletion?")) return; showLoader(true, "Deleting...");
+            try { const meta = await sheetsRequest('GET', '?fields=sheets.properties'); const id = meta.sheets.find(s => s.properties.title === sheet).properties.sheetId; await sheetsRequest('POST', ':batchUpdate', { requests: [{ deleteDimension: { range: { sheetId: id, dimension: "ROWS", startIndex: idx - 1, endIndex: idx } } }] }); await initializeData(); } catch (e) { alert(e.message); } finally { showLoader(false); }
         }
+
         async function checkDatabaseHealth() {
-            const btn = document.getElementById('btn-repair-db');
-            const badge = document.getElementById('db-status-badge');
-            try {
-                const meta = await sheetsRequest('GET', '?fields=sheets.properties.title');
-                const existing = meta.sheets.map(s => s.properties.title);
-                const needsRepair = ['Stores', 'Employees', 'Attendance', 'Settings'].some(r => !existing.includes(r));
-                if (needsRepair) { badge.innerText = "DATABASE CORRUPT"; badge.className = "inline-block px-4 py-1 rounded-full text-[9px] font-black mb-6 bg-rose-100 text-rose-600"; btn.disabled = false; btn.className = "w-full bg-rose-600 text-white p-6 rounded-[2rem] font-black shadow-lg"; }
-                else { badge.innerText = "DATABASE HEALTHY"; badge.className = "inline-block px-4 py-1 rounded-full text-[9px] font-black mb-6 bg-emerald-100 text-emerald-600"; btn.disabled = true; }
-            } catch (e) { badge.innerText = "OFFLINE"; }
+            const btn = document.getElementById('btn-repair-db'); const badge = document.getElementById('db-status-badge');
+            try { const meta = await sheetsRequest('GET', '?fields=sheets.properties.title'); const existing = meta.sheets.map(s => s.properties.title); const needsRepair = ['Stores', 'Employees', 'Attendance', 'Settings'].some(r => !existing.includes(r)); if (needsRepair) { badge.innerText = "DB: REPAIR NEEDED"; badge.className = "inline-block px-4 py-1 rounded-full text-[9px] font-black mb-6 bg-rose-100 text-rose-600"; btn.disabled = false; btn.className = "w-full bg-rose-600 text-white p-6 rounded-3xl font-black"; } else { badge.innerText = "DB: CONNECTED"; badge.className = "inline-block px-4 py-1 rounded-full text-[9px] font-black mb-6 bg-emerald-100 text-emerald-600"; btn.disabled = true; } } catch (e) { badge.innerText = "OFFLINE"; }
         }
+
         async function adminSyncDatabase() {
-            showLoader(true, "Healing Database...");
+            showLoader(true, "Repairing...");
             try {
-                const meta = await sheetsRequest('GET', '?fields=sheets.properties.title');
-                const existing = meta.sheets.map(s => s.properties.title);
+                const meta = await sheetsRequest('GET', '?fields=sheets.properties.title'); const existing = meta.sheets.map(s => s.properties.title);
                 const schema = [{ name: 'Stores', h: ['ID', 'Name', 'Lat', 'Lng', 'Range'] }, { name: 'Employees', h: ['Email', 'Name', 'StoreName', 'Status'] }, { name: 'Attendance', h: ['Timestamp', 'Date', 'Email', 'Action', 'Photo', 'GPS', 'Device'] }, { name: 'Settings', h: ['Key', 'Value'] }];
-                for (const sheet of schema) {
-                    if (!existing.includes(sheet.name)) {
-                        await sheetsRequest('POST', ':batchUpdate', { requests: [{ addSheet: { properties: { title: sheet.name } } }] });
-                        await sheetsRequest('PUT', `/values/${sheet.name}!A1:G1?valueInputOption=RAW`, { values: [sheet.h] });
-                    }
-                }
-                showToast("System Integrity Verified"); initializeData();
+                for (const sheet of schema) { if (!existing.includes(sheet.name)) { await sheetsRequest('POST', ':batchUpdate', { requests: [{ addSheet: { properties: { title: sheet.name } } }] }); await sheetsRequest('PUT', `/values/${sheet.name}!A1:G1?valueInputOption=RAW`, { values: [sheet.h] }); } }
+                showToast("System Repaired"); initializeData();
             } catch (e) { alert(e.message); } finally { showLoader(false); }
         }
-        function resetStoreForm() { document.getElementById('form-store').reset(); document.getElementById('store-row-idx').value = ""; document.getElementById('store-form-title').innerText = "Manage Locations"; document.getElementById('store-cancel-btn').classList.add('hidden'); }
-        function resetStaffForm() { document.getElementById('form-employee').reset(); document.getElementById('staff-row-idx').value = ""; document.getElementById('staff-form-title').innerText = "Onboard Personnel"; document.getElementById('staff-cancel-btn').classList.add('hidden'); }
+
+        async function enterAdminMode() { if (appState.settings.pinEnabled) { const pin = prompt("Enter PIN"); if (pin === appState.settings.pin) setAdminTab('dash'), toggleView('admin'); else alert("Invalid PIN"); } else { setAdminTab('dash'), toggleView('admin'); } }
+        async function updateSecuritySettings() { showLoader(true, "Updating PIN..."); const pin = document.getElementById('admin-pin-code').value; const en = document.getElementById('pin-toggle').checked; try { await sheetsRequest('PUT', '/values/Settings!A1:B2?valueInputOption=RAW', { values: [['PIN_ENABLED', en], ['ADMIN_PIN', pin]] }); appState.settings = { pin, pinEnabled: en }; showToast("PIN Saved"); } catch (e) { alert(e.message); } finally { showLoader(false); } }
+        function resetStoreForm() { document.getElementById('form-store').reset(); document.getElementById('store-row-idx').value = ""; document.getElementById('store-form-title').innerText = "Add Location"; document.getElementById('store-cancel-btn').classList.add('hidden'); }
+        function resetStaffForm() { document.getElementById('form-employee').reset(); document.getElementById('staff-row-idx').value = ""; document.getElementById('staff-form-title').innerText = "Onboard Staff"; document.getElementById('staff-cancel-btn').classList.add('hidden'); }
     </script>
 </body>
 </html>
