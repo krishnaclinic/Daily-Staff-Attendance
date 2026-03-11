@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro-Attend | Enterprise v5.3</title>
+    <title>Pro-Attend | v5.4 Production</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -16,9 +16,9 @@
         canvas { display: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         /* PIN UI FIX */
-        .pin-field { text-align: center; font-family: 'Courier New', Courier, monospace; letter-spacing: 0.8rem; font-weight: 900; }
+        .pin-field { text-align: center; font-family: monospace; letter-spacing: 0.5em; text-indent: 0.5em; font-weight: 900; }
         .step-hidden { display: none !important; }
-        .accuracy-pill { font-size: 9px; padding: 2px 8px; border-radius: 99px; font-weight: 800; border: 1px solid currentColor; }
+        .accuracy-badge { font-size: 8px; padding: 2px 8px; border-radius: 99px; font-weight: 900; border: 1px solid currentColor; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900">
@@ -26,14 +26,14 @@
     <!-- Global Loader -->
     <div id="loader" class="loading-overlay">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-700 mb-4"></div>
-        <p id="loader-msg" class="font-bold text-indigo-700 uppercase tracking-tighter text-[10px]">Processing...</p>
+        <p id="loader-msg" class="font-black text-indigo-700 uppercase tracking-tighter text-[10px]">Processing...</p>
     </div>
 
     <!-- Security Lockout -->
     <div id="lockout-screen" class="locked-screen">
-        <div class="w-24 h-24 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-6 animate-bounce"><i class="fas fa-user-slash text-4xl"></i></div>
+        <div class="w-24 h-24 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-6"><i class="fas fa-user-lock text-4xl"></i></div>
         <h2 class="text-2xl font-black text-slate-800">UNAUTHORIZED</h2>
-        <p class="text-slate-500 text-sm max-w-xs mb-8 italic text-center">Your Google account is not in our verified staff database. Please contact your manager.</p>
+        <p class="text-slate-500 text-sm max-w-xs mb-8 italic text-center">Identity not found in staff database. Contact Management.</p>
         <button onclick="logout()" class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black shadow-xl uppercase">Logout</button>
     </div>
 
@@ -54,11 +54,12 @@
         
         <!-- View: Login -->
         <section id="view-auth" class="mt-20 text-center animate-fade-in">
-            <div class="bg-white p-12 rounded-[3.5rem] shadow-2xl max-w-sm mx-auto border border-slate-100">
-                <div class="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-8 transform rotate-3"><i class="fas fa-satellite-dish text-4xl text-indigo-600"></i></div>
-                <h2 class="text-2xl font-black text-slate-800 tracking-tighter uppercase mb-10 italic">Auth Portal</h2>
+            <div class="bg-white p-12 rounded-[3.5rem] shadow-2xl max-w-sm mx-auto border border-slate-100 text-center">
+                <div class="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-8 transform rotate-3"><i class="fas fa-shield-halved text-4xl text-indigo-600"></i></div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tighter uppercase mb-2 italic">Gateway</h2>
+                <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-10 italic">Secure Hardware Verification</p>
                 <button onclick="login()" class="w-full bg-indigo-700 text-white p-5 rounded-2xl flex items-center justify-center gap-4 font-black shadow-2xl border-b-4 border-indigo-900 transition active:scale-95 uppercase text-xs tracking-widest">
-                    <i class="fab fa-google text-lg"></i> Sign in with Google
+                    <i class="fab fa-google text-lg"></i> Authenticate
                 </button>
             </div>
         </section>
@@ -67,30 +68,33 @@
         <section id="view-attendance" class="hidden space-y-6">
             <div class="bg-white p-6 rounded-3xl shadow-lg border-l-8 border-indigo-600 flex justify-between items-center">
                 <div>
-                    <h2 id="shift-status" class="text-2xl font-black text-slate-800 tracking-tight italic uppercase leading-none mb-2 text-indigo-700">Verifying...</h2>
-                    <p id="user-display-name" class="text-slate-400 text-sm font-medium flex items-center gap-2 italic uppercase tracking-tighter"></p>
+                    <h2 id="shift-status" class="text-2xl font-black text-slate-800 tracking-tight italic uppercase leading-none mb-2 text-indigo-700">Syncing...</h2>
+                    <p id="user-display-name" class="text-slate-400 text-sm font-medium flex items-center gap-2 italic uppercase tracking-tighter uppercase">Identifying...</p>
                 </div>
                 <div id="status-dot" class="w-4 h-4 rounded-full bg-slate-200 animate-pulse border-2 border-white shadow-sm"></div>
             </div>
 
             <div id="punch-workflow" class="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-8 text-center border border-slate-100">
                 
-                <!-- HARDWARE GPS STEP -->
+                <!-- GPS Logic -->
                 <div id="location-card" class="bg-slate-50 p-6 rounded-3xl border-2 border-dashed border-slate-200 shadow-inner">
-                    <div class="flex flex-col items-center gap-2">
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 text-center">
+                    <div class="flex flex-col items-center gap-1">
+                        <div id="location-status-container" class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                             <i class="fas fa-location-crosshairs animate-spin" id="gps-icon"></i> 
-                            <span id="location-text">Forcing Hardware GPS...</span>
+                            <span id="location-text">Requesting Hardware GPS...</span>
                         </div>
                         <div id="distance-info" class="text-xl font-black text-indigo-700 hidden italic tracking-tighter uppercase">0.0m FROM HUB</div>
-                        <div id="accuracy-display" class="hidden flex gap-2">
-                            <span id="acc-val" class="accuracy-pill">--</span>
+                        <div id="accuracy-display" class="hidden mt-1">
+                            <span id="acc-val" class="accuracy-badge">--</span>
                         </div>
-                        <div id="gps-trace" class="text-[8px] font-bold text-indigo-300 uppercase mt-2 font-mono whitespace-pre-wrap">Trace: Pending</div>
+                        <button onclick="startGeofencing()" class="mt-4 text-[9px] font-black text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl uppercase tracking-widest border border-indigo-100">
+                            <i class="fas fa-rotate mr-1"></i> Re-Sync GPS
+                        </button>
+                        <div id="gps-trace" class="text-[8px] font-bold text-indigo-300 uppercase mt-2 font-mono italic">Trace: Ready</div>
                     </div>
                 </div>
 
-                <!-- CAMERA STEP -->
+                <!-- CAMERA SECTION -->
                 <div id="camera-section" class="step-hidden animate-fade-in">
                     <div class="relative overflow-hidden bg-slate-900 rounded-3xl aspect-square max-w-[300px] mx-auto border-4 border-white shadow-2xl flex items-center justify-center mb-6">
                         <video id="video-preview" autoplay playsinline class="hidden"></video>
@@ -106,81 +110,70 @@
                     </div>
                 </div>
 
-                <!-- ACTION STEP -->
-                <div id="action-section" class="step-hidden grid grid-cols-2 gap-5 pb-4 animate-fade-in">
-                    <button onclick="handlePunch('IN')" class="bg-emerald-500 text-white py-6 rounded-3xl font-black text-xl shadow-lg border-b-8 border-emerald-700 uppercase italic">Punch In</button>
-                    <button onclick="handlePunch('OUT')" class="bg-rose-600 text-white py-6 rounded-3xl font-black text-xl shadow-lg border-b-8 border-rose-800 uppercase italic">Punch Out</button>
+                <!-- ACTION BUTTONS -->
+                <div id="action-section" class="hidden grid grid-cols-2 gap-5 pb-4 animate-fade-in">
+                    <button onclick="handlePunch('IN')" class="bg-emerald-500 text-white py-6 rounded-3xl font-black text-xl shadow-lg border-b-8 border-emerald-700 uppercase italic">In</button>
+                    <button onclick="handlePunch('OUT')" class="bg-rose-600 text-white py-6 rounded-3xl font-black text-xl shadow-lg border-b-8 border-rose-800 uppercase italic">Out</button>
                 </div>
 
-                <div id="punch-error" class="hidden text-rose-600 text-[10px] font-black uppercase p-5 bg-rose-50 rounded-2xl border-2 border-rose-100">
-                    <i class="fas fa-triangle-exclamation mr-1"></i> <span id="punch-error-text"></span>
+                <div id="punch-error" class="hidden text-rose-600 text-[10px] font-black uppercase p-5 bg-rose-50 rounded-2xl border-2 border-rose-200 flex items-center justify-center gap-2 shadow-inner italic">
+                    <i class="fas fa-circle-exclamation"></i> <span id="punch-error-text"></span>
                 </div>
             </div>
 
+            <!-- COMPLETED MSG -->
             <div id="shift-completed" class="hidden bg-emerald-50 border-2 border-emerald-200 p-12 rounded-[3.5rem] text-center shadow-inner animate-fade-in">
-                <i class="fas fa-circle-check text-7xl text-emerald-500 mb-4"></i>
-                <h3 class="text-2xl font-black text-emerald-800 uppercase italic leading-none">Shift Finalized</h3>
-                <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-widest mt-2 italic">Records are complete for today.</p>
+                <i class="fas fa-circle-check text-7xl text-emerald-500 mb-4 shadow-sm"></i>
+                <h3 class="text-2xl font-black text-emerald-800 uppercase italic leading-none">Records<br>Finalized</h3>
+                <p class="text-xs text-emerald-600 font-bold uppercase tracking-widest mt-2">Attendance is logged for today.</p>
             </div>
         </section>
 
         <!-- View: Admin Panel -->
         <section id="view-admin" class="hidden space-y-6 pb-20">
-            <div class="flex border-b border-slate-200 overflow-x-auto gap-4 no-scrollbar">
+            <div class="flex border-b border-slate-200 overflow-x-auto gap-4 no-scrollbar italic">
                 <button onclick="setAdminTab('dash')" class="tab-btn px-4 py-4 font-black text-[10px] active uppercase tracking-widest" id="tab-dash">Analytics</button>
-                <button onclick="setAdminTab('staff')" class="tab-btn px-4 py-4 font-black text-[10px] uppercase tracking-widest" id="tab-staff">Staff</button>
+                <button onclick="setAdminTab('staff')" class="tab-btn px-4 py-4 font-black text-[10px] uppercase tracking-widest" id="tab-staff">Staff Editor</button>
                 <button onclick="setAdminTab('stores')" class="tab-btn px-4 py-4 font-black text-[10px] uppercase tracking-widest" id="tab-stores">Stores</button>
                 <button onclick="setAdminTab('setup')" class="tab-btn px-4 py-4 font-black text-[10px] uppercase tracking-widest" id="tab-setup">System</button>
             </div>
 
-            <!-- DASHBOARD / ANALYTICS -->
             <div id="admin-dash" class="space-y-6">
-                <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-6 text-center">
+                <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-6">
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[9px] font-black text-slate-400 uppercase italic">From</label>
-                            <input type="date" id="filter-start" class="border-2 p-4 rounded-2xl text-xs font-bold outline-none focus:border-indigo-500 bg-slate-50 shadow-inner">
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <label class="text-[9px] font-black text-slate-400 uppercase italic">To</label>
-                            <input type="date" id="filter-end" class="border-2 p-4 rounded-2xl text-xs font-bold outline-none focus:border-indigo-500 bg-slate-50 shadow-inner">
-                        </div>
-                        <select id="filter-store" class="col-span-2 border-2 p-4 rounded-2xl text-xs font-black bg-slate-50 outline-none italic uppercase"></select>
-                        <button onclick="loadDashboardReport()" class="col-span-2 bg-indigo-700 text-white p-5 rounded-2xl font-black shadow-xl hover:bg-indigo-800 transition uppercase tracking-widest flex items-center justify-center gap-2">
+                        <div class="flex flex-col gap-1 italic"><label class="text-[9px] font-black text-slate-400 ml-1 uppercase">From Date</label><input type="date" id="filter-start" class="border-2 p-4 rounded-2xl text-xs font-bold outline-none focus:border-indigo-500 bg-slate-50"></div>
+                        <div class="flex flex-col gap-1 italic"><label class="text-[9px] font-black text-slate-400 ml-1 uppercase">To Date</label><input type="date" id="filter-end" class="border-2 p-4 rounded-2xl text-xs font-bold outline-none focus:border-indigo-500 bg-slate-50"></div>
+                        <select id="filter-store" class="col-span-2 border-2 p-4 rounded-2xl text-xs font-black bg-slate-50 outline-none italic"></select>
+                        <button onclick="loadDashboardReport()" class="col-span-2 bg-indigo-700 text-white p-5 rounded-2xl font-black shadow-xl hover:bg-indigo-800 transition uppercase tracking-widest flex items-center justify-center gap-2 italic">
                             <i class="fas fa-sync"></i> Refresh Data
                         </button>
                     </div>
                 </div>
-                <div id="report-results" class="space-y-3 pb-20"></div>
+                <div id="report-results" class="space-y-3 pb-20 uppercase font-black text-[10px]"></div>
             </div>
 
-            <!-- STAFF MANAGEMENT -->
             <div id="admin-staff" class="hidden space-y-6">
-                <form id="form-employee" class="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-5 border border-slate-100">
+                <form id="form-employee" class="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-5 border border-slate-100 italic">
                     <input type="hidden" id="staff-row-idx">
-                    <div class="space-y-3 italic">
-                        <input type="email" id="emp-email" placeholder="Google Email" class="w-full border-2 p-5 rounded-2xl outline-none bg-slate-50 shadow-inner" required>
-                        <input type="text" id="emp-name" placeholder="Full Name" class="w-full border-2 p-5 rounded-2xl outline-none bg-slate-50 shadow-inner" required>
-                        <input type="text" id="emp-position" placeholder="Position/Tag (e.g. Manager)" class="w-full border-2 p-5 rounded-2xl outline-none bg-slate-50 shadow-inner uppercase font-bold" required>
-                        <select id="emp-store-select" class="w-full border-2 p-5 rounded-2xl outline-none bg-slate-50 font-bold italic" required></select>
+                    <div class="space-y-3">
+                        <input type="email" id="emp-email" placeholder="Email Address" class="w-full border-2 p-5 rounded-2xl outline-none bg-slate-50 shadow-inner" required>
+                        <input type="text" id="emp-name" placeholder="Staff Name" class="w-full border-2 p-5 rounded-2xl outline-none bg-slate-50 shadow-inner" required>
+                        <input type="text" id="emp-position" placeholder="Position (e.g. Doctor, Security)" class="w-full border-2 p-5 rounded-2xl outline-none bg-slate-50 shadow-inner uppercase font-bold" required>
+                        <select id="emp-store-select" class="w-full border-2 p-5 rounded-2xl outline-none bg-slate-50 font-bold" required></select>
                     </div>
-                    <button type="submit" id="staff-save-btn" class="w-full bg-emerald-600 text-white p-5 rounded-2xl font-black shadow-lg">SAVE MEMBER</button>
-                    <button type="button" id="staff-cancel-btn" onclick="resetStaffForm()" class="hidden w-full bg-slate-100 text-slate-500 p-3 rounded-2xl font-black uppercase text-[10px]">Cancel Edit</button>
+                    <button type="submit" id="staff-save-btn" class="w-full bg-emerald-600 text-white p-5 rounded-2xl font-black shadow-lg">COMMIT PROFILE</button>
                 </form>
-                <div class="bg-white p-4 rounded-3xl border shadow-inner">
-                    <select id="manage-staff-filter" onchange="renderStaffList()" class="w-full font-black text-indigo-700 bg-transparent outline-none uppercase text-[10px] tracking-widest"></select>
-                </div>
+                <select id="manage-staff-filter" onchange="renderStaffList()" class="w-full border-2 p-5 rounded-3xl bg-white font-black text-indigo-700 shadow-inner outline-none italic"></select>
                 <div id="staff-list" class="space-y-2"></div>
             </div>
 
-            <!-- STORES -->
-            <div id="admin-stores" class="hidden space-y-6 text-center">
-                <form id="form-store" class="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-5 border border-slate-100 italic text-center">
+            <div id="admin-stores" class="hidden space-y-6">
+                <form id="form-store" class="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-5 border border-slate-100 text-center">
                     <input type="hidden" id="store-row-idx">
-                    <input type="text" id="store-name" placeholder="Hub Name" class="w-full border-2 p-5 rounded-2xl outline-none shadow-inner bg-slate-50 text-center" required>
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="text" id="store-lat" placeholder="Latitude" class="border-2 p-5 rounded-2xl outline-none shadow-inner bg-slate-50" required>
-                        <input type="text" id="store-lng" placeholder="Longitude" class="border-2 p-5 rounded-2xl outline-none shadow-inner bg-slate-50" required>
+                    <input type="text" id="store-name" placeholder="Store Name" class="w-full border-2 p-5 rounded-2xl outline-none shadow-inner bg-slate-50 text-center uppercase font-black italic" required>
+                    <div class="grid grid-cols-2 gap-4 italic uppercase">
+                        <input type="text" id="store-lat" placeholder="Latitude" class="border-2 p-5 rounded-2xl bg-slate-50 outline-none shadow-inner" required>
+                        <input type="text" id="store-lng" placeholder="Longitude" class="border-2 p-5 rounded-2xl bg-slate-50 outline-none shadow-inner" required>
                         <input type="number" id="store-range" placeholder="Punch Range (m)" class="col-span-2 border-2 p-5 rounded-2xl font-black shadow-inner bg-slate-50" value="150" required>
                     </div>
                     <button type="submit" id="store-save-btn" class="w-full bg-slate-900 text-white p-5 rounded-2xl font-black shadow-lg">SAVE HUB</button>
@@ -188,19 +181,17 @@
                 <div id="stores-list" class="space-y-2"></div>
             </div>
 
-            <!-- SYSTEM -->
             <div id="admin-setup" class="hidden space-y-6">
-                <div class="bg-white p-10 rounded-[3rem] shadow-2xl text-center border border-slate-100">
-                    <div id="db-status-badge" class="inline-block px-5 py-2 rounded-full text-[9px] font-black mb-6 uppercase tracking-widest bg-slate-100 italic">DB: CONNECTED</div>
-                    <button id="btn-repair-db" onclick="adminSyncDatabase()" class="w-full bg-rose-600 text-white p-8 rounded-[2rem] font-black shadow-lg italic uppercase tracking-widest">Repair DB Structure</button>
+                <div class="bg-white p-10 rounded-[3rem] shadow-2xl text-center">
+                    <button id="btn-repair-db" onclick="adminSyncDatabase()" class="w-full bg-rose-600 text-white p-8 rounded-[2rem] font-black shadow-lg italic uppercase tracking-widest">REPAIR SYSTEM DB</button>
                     
                     <div class="mt-12 p-8 bg-slate-50 rounded-[3rem] text-left border-2 border-slate-100 shadow-inner">
                         <div class="flex items-center justify-between mb-6">
-                            <span class="text-[10px] font-black uppercase text-slate-400 italic">PIN Security Shield</span>
-                            <input type="checkbox" id="pin-toggle" onchange="updateSecuritySettings()" class="w-6 h-6 rounded-full border-slate-300">
+                            <span class="text-[10px] font-black uppercase text-slate-400 italic">PIN Protection Status</span>
+                            <input type="checkbox" id="pin-toggle" onchange="updateSecuritySettings()" class="w-6 h-6 rounded-full">
                         </div>
                         <div class="relative">
-                            <input type="password" id="admin-pin-code" maxlength="4" placeholder="••••" class="w-full border-2 p-6 rounded-3xl text-center font-black text-4xl pin-field outline-none bg-white shadow-sm focus:border-indigo-400 transition-all">
+                            <input type="password" id="admin-pin-code" maxlength="4" placeholder="••••" class="w-full border-2 p-6 rounded-3xl text-center font-black text-4xl pin-field outline-none bg-white shadow-sm focus:border-indigo-400">
                             <button onclick="togglePinDisplay()" class="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300">
                                 <i id="pin-eye-icon" class="fas fa-eye"></i>
                             </button>
@@ -212,9 +203,9 @@
         </section>
     </main>
 
-    <div id="toast" class="fixed toast bg-slate-900 text-white px-8 py-5 rounded-[2rem] shadow-2xl flex flex-col min-w-[320px] border-b-4 border-indigo-600 bottom-10 left-1/2 -translate-x-1/2 z-[1000] opacity-0 pointer-events-none transition-all duration-300 font-bold italic font-mono uppercase text-[9px]">
-        <span id="toast-title" class="text-indigo-400">Gateway Trace</span>
-        <span id="toast-msg" class="mt-1"></span>
+    <div id="toast" class="fixed toast bg-slate-900 text-white px-8 py-5 rounded-[2rem] shadow-2xl flex flex-col min-w-[320px] border-b-4 border-indigo-600 bottom-10 left-1/2 -translate-x-1/2 z-[1000] opacity-0 pointer-events-none transition-all duration-300 italic font-bold">
+        <span id="toast-title" class="text-[9px] font-black uppercase text-indigo-400 tracking-widest italic">Gateway Trace</span>
+        <span id="toast-msg" class="text-xs mt-1 italic font-mono uppercase tracking-tighter"></span>
     </div>
 
     <canvas id="photo-canvas" width="300" height="300"></canvas>
@@ -273,14 +264,14 @@
         function login() { tokenClient.requestAccessToken(); }
 
         async function handleAuthSuccess() {
-            showLoader(true, "Synchronizing Gateway...");
+            showLoader(true, "Synchronizing Identity...");
             try {
                 const res = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, { headers: { Authorization: `Bearer ${appState.token}` } });
                 if (!res.ok) { logout(); return; }
                 appState.user = await res.json();
                 localStorage.setItem('user_info', JSON.stringify(appState.user));
 
-                document.getElementById('user-display-name').innerHTML = `<i class="fas fa-id-badge text-emerald-400 mr-1"></i> ${appState.user.name}`;
+                document.getElementById('user-display-name').innerHTML = `<i class="fas fa-id-badge text-indigo-400"></i> ${appState.user.name}`;
                 if (appState.user.email.toLowerCase().trim() === CONFIG.OWNER_EMAIL.toLowerCase().trim()) {
                     document.getElementById('admin-toggle-btn').classList.remove('hidden');
                 }
@@ -305,7 +296,7 @@
                 }));
 
                 appState.staff = (eRes.values || []).filter(r => r[0]).map((r, i) => ({ 
-                    email: String(r[0]).toLowerCase().trim(), name: r[1], store: r[2], pos: r[3] || "Staff", rowIdx: i + 2 
+                    email: String(r[0]).toLowerCase().trim(), name: r[1], store: String(r[2]).trim(), pos: r[3] || "Staff", rowIdx: i + 2 
                 }));
                 
                 if (setRes.values) {
@@ -323,49 +314,38 @@
 
                 populateUI();
                 await checkShiftStatus();
+                startGeofencing();
             } catch (e) { checkDatabaseHealth(); }
         }
 
-        /** 3. THE HARDWARE GPS ENGINE (Force Precise Lock) */
+        /** 3. THE HARDWARE GPS FIX ENGINE */
         function traceGPS(msg) {
             document.getElementById('gps-trace').innerText = `DEBUG TRACE: ${msg}`;
         }
 
         async function startGeofencing() {
-            if (!navigator.geolocation) { updateLocUI("GPS DISABLED", "fa-ban"); return; }
+            if (!navigator.geolocation) { updateLocUI("DEVICE GPS NOT FOUND", "fa-ban"); return; }
             
-            traceGPS("STEP 1: Checking permissions API...");
+            traceGPS("SEARCHING: FORCING REAL-TIME HARDWARE HANDSHAKE...");
             
-            try {
-                const status = await navigator.permissions.query({name:'geolocation'});
-                if (status.state === 'denied') {
-                    updateLocUI("ENABLE LOCATION PERMISSION", "fa-triangle-exclamation text-rose-500");
-                    traceGPS("CRITICAL: Permission denied in browser settings.");
-                    return;
-                }
-            } catch(e) { traceGPS("INFO: Permissions API not supported, continuing..."); }
-
-            traceGPS("STEP 2: Forcing hardware handshake (Awaiting Real-time Signal)...");
-            
+            // Watchdog Logic: Fallback if High-Accuracy hangs
             let gpsWatchdog = setTimeout(() => {
                 if (!appState.gpsFixed) {
-                    traceGPS("RECOVERY: High-Acc Timed out. Falling back to Standard Mode...");
-                    navigator.geolocation.getCurrentPosition(pos => handleGPSFix(pos), 
-                    (e) => traceGPS(`FAIL: Code ${e.code}`), 
-                    { enableHighAccuracy: false, timeout: 5000 });
+                    traceGPS("RECOVERY: High-Acc Timed out. Switching to Standard mode.");
+                    navigator.geolocation.getCurrentPosition(pos => handleGPSFix(pos), null, { enableHighAccuracy: false, timeout: 5000 });
                 }
-            }, 8000);
+            }, 7000);
 
             navigator.geolocation.watchPosition(pos => {
                 clearTimeout(gpsWatchdog);
                 handleGPSFix(pos);
             }, (err) => {
-                updateLocUI("GPS SIGNAL ERROR", "fa-triangle-exclamation text-rose-500");
+                updateLocUI("ENABLE GPS SENSOR", "fa-triangle-exclamation text-rose-500 font-black");
                 traceGPS(`HARDWARE ERROR: Code ${err.code}`);
             }, { 
                 enableHighAccuracy: true, 
                 timeout: 15000, 
-                maximumAge: 0 // DO NOT USE CACHED LOCATION
+                maximumAge: 0 // CRITICAL: NO CACHE (Ignores IP-based location)
             });
         }
 
@@ -379,23 +359,22 @@
             const accVal = document.getElementById('acc-val');
             accEl.classList.remove('hidden');
             
-            traceGPS(`Ping Received: ${appState.curLat.toFixed(5)}, ${appState.curLng.toFixed(5)} (±${Math.round(acc)}m)`);
-            
             if (acc > 100) {
-                accVal.className = "accuracy-pill border-rose-500 text-rose-500 bg-rose-50 animate-pulse";
-                accVal.innerText = `POOR SIGNAL: ±${Math.round(acc)}m (UNSECURE)`;
+                accVal.className = "accuracy-pill border-rose-500 text-rose-600 bg-rose-50";
+                accVal.innerText = `Weak Lock: ±${Math.round(acc)}m (Restricted)`;
                 document.getElementById('camera-section').classList.add('step-hidden');
             } else {
                 accVal.className = "accuracy-pill border-emerald-500 text-emerald-600 bg-emerald-50";
                 accVal.innerText = `SECURE SIGNAL: ±${Math.round(acc)}m (ACCURATE)`;
                 validateProximity();
             }
+            traceGPS(`Lock Found: ${appState.curLat.toFixed(5)}, ${appState.curLng.toFixed(5)}`);
         }
 
         function validateProximity() {
             if (!appState.empData || !appState.gpsFixed) return;
             const store = appState.stores.find(s => s.name === appState.empData.store);
-            if (!store) { updateLocUI("STORE HUB MISSING", "fa-circle-question"); return; }
+            if (!store) { updateLocUI("BRANCH UNKNOWN", "fa-circle-question"); return; }
 
             const d = getDist(appState.curLat, appState.curLng, store.lat, store.lng);
             appState.dist = d;
@@ -405,18 +384,18 @@
             info.classList.remove('hidden');
 
             if (d <= store.range) {
-                updateLocUI("ACCESS GRANTED: IN RANGE", "fa-circle-check text-emerald-500 font-black");
+                updateLocUI("IN RANGE: ACCESS GRANTED", "fa-circle-check text-emerald-500 font-black");
                 document.getElementById('status-dot').className = "w-4 h-4 rounded-full bg-emerald-500 shadow-lg animate-pulse border-2 border-white";
                 document.getElementById('camera-section').classList.remove('step-hidden'); 
             } else {
-                updateLocUI("DENIED: TOO FAR AWAY", "fa-location-dot text-rose-400 font-black tracking-widest uppercase");
+                updateLocUI("ACCESS DENIED: TOO FAR", "fa-location-dot text-rose-400 font-black tracking-widest");
                 document.getElementById('status-dot').className = "w-4 h-4 rounded-full bg-rose-400 border-2 border-white";
                 document.getElementById('camera-section').classList.add('step-hidden'); 
             }
             validateFinalPunchState();
         }
 
-        /** 4. CAMERA & SHIFT ENGINE */
+        /** 4. CAMERA & PUNCH */
         async function startCamera() {
             try {
                 const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
@@ -424,7 +403,7 @@
                 document.getElementById('camera-placeholder').classList.add('hidden');
                 document.getElementById('start-camera-btn').classList.add('hidden');
                 document.getElementById('capture-btn').classList.remove('hidden');
-            } catch (e) { alert("Enable Camera Permission."); }
+            } catch (e) { alert("Camera Access Denied"); }
         }
 
         function capturePhoto() {
@@ -439,26 +418,22 @@
 
         function validateFinalPunchState() {
             const section = document.getElementById('action-section');
-            const store = appState.stores.find(s => s.name === appState.empData?.store);
-            if (appState.dist <= (store?.range || 150) && appState.photoBase64) {
-                section.classList.remove('step-hidden');
-            } else {
-                section.classList.add('step-hidden');
-            }
+            if (appState.dist <= 150 && appState.photoBase64) { section.classList.remove('step-hidden'); } 
+            else { section.classList.add('step-hidden'); }
         }
 
         async function handlePunch(action) {
             showLoader(true, "Synchronizing Gateway...");
             try {
-                const row = [new Date().toLocaleString(), new Date().toISOString().split('T')[0], appState.user.email, action, appState.photoBase64, `${appState.curLat},${appState.curLng}`, "CLIENT-X"];
+                const row = [new Date().toLocaleString(), new Date().toISOString().split('T')[0], appState.user.email, action, appState.photoBase64, `${appState.curLat},${appState.curLng}`, "PRO-STABLE-v5.3"];
                 await sheetsRequest('POST', '/values/Attendance!A:A:append?valueInputOption=USER_ENTERED', { values: [row] });
                 location.reload();
             } catch (e) { alert("Sync Error"); showLoader(false); }
         }
 
-        /** 5. ADMIN ANALYTICS & OVERRIDE */
+        /** 5. ANALYTICS & PIN UI FIX */
         async function loadDashboardReport() {
-            showLoader(true, "Refreshing Records...");
+            showLoader(true, "Syncing Logs...");
             const results = document.getElementById('report-results');
             try {
                 const res = await sheetsRequest('GET', '/values/Attendance!A2:G');
@@ -472,20 +447,19 @@
 
                 results.innerHTML = `<div class="grid grid-cols-2 gap-4"><div class="bg-indigo-700 text-white p-5 rounded-3xl text-center shadow-lg"><p class="text-[8px] font-black uppercase opacity-60">Punches</p><p class="text-2xl font-black">${logs.length}</p></div><div class="bg-slate-900 text-white p-5 rounded-3xl text-center shadow-lg"><p class="text-[8px] font-black uppercase opacity-60">Active</p><p class="text-2xl font-black">${new Set(logs.map(l=>l.email)).size}</p></div></div>` + logs.slice().reverse().map(l => {
                     const emp = appState.staff.find(s => s.email === l.email.toLowerCase());
-                    return `<div class="bg-white p-4 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-[10px] font-black uppercase">${l.email.split('@')[0]}<p class="text-[8px] text-slate-400 font-normal italic">${emp?.pos || "Staff"} • ${l.date} @ ${l.ts.split(', ')[1]}</p></div><div class="flex items-center gap-2"><span class="px-2 py-1 rounded-full text-[8px] font-black ${l.action === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">${l.action}</span><button onclick="overrideRecord(${l.rowIdx}, '${l.action}')" class="text-indigo-600 p-2"><i class="fas fa-pen-to-square"></i></button></div></div>`;
+                    return `<div class="bg-white p-4 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-[10px] font-black uppercase">${l.email.split('@')[0]}<p class="text-[8px] text-slate-400 font-normal italic">${emp?.pos || "Staff"} • ${l.date}</p></div><div class="flex items-center gap-2"><span class="px-2 py-1 rounded-full text-[8px] font-black ${l.action === 'IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">${l.action}</span><button onclick="overrideRecord(${l.rowIdx}, '${l.action}')" class="text-indigo-600 p-2"><i class="fas fa-pen-to-square"></i></button></div></div>`;
                 }).join('');
             } catch (e) { results.innerHTML = `<p class="text-center italic uppercase font-black text-rose-500 py-10 opacity-40">Sync Failure</p>`; } finally { showLoader(false); }
         }
 
         async function overrideRecord(row, curr) {
-            const target = prompt("Set Attendance status (IN or OUT):", curr);
+            const target = prompt("Override Status (IN or OUT):", curr);
             if (!target || (target.toUpperCase() !== 'IN' && target.toUpperCase() !== 'OUT')) return;
-            showLoader(true, "Updating Hub...");
+            showLoader(true, "Updating DB...");
             await sheetsRequest('PUT', `/values/Attendance!D${row}?valueInputOption=USER_ENTERED`, { values: [[target.toUpperCase()]] });
             loadDashboardReport();
         }
 
-        /** 6. UI & PIN FIXES */
         function togglePinDisplay() {
             const input = document.getElementById('admin-pin-code');
             const icon = document.getElementById('pin-eye-icon');
@@ -494,6 +468,7 @@
             icon.className = appState.pinVisible ? "fas fa-eye-slash" : "fas fa-eye";
         }
 
+        /** 6. SYSTEM UTILS */
         async function sheetsRequest(method, path, body = null) {
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}${path}`;
             const res = await fetch(url, { method, headers: { 'Authorization': `Bearer ${appState.token}`, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : null });
@@ -512,8 +487,8 @@
         function populateUI() {
             const opt = appState.stores.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
             document.getElementById('emp-store-select').innerHTML = `<option value="">Select Branch</option>` + opt;
-            document.getElementById('manage-staff-filter').innerHTML = `<option value="all">Personnel: View All Members</option>` + opt;
-            document.getElementById('filter-store').innerHTML = `<option value="">Scope: Global Org</option>` + opt;
+            document.getElementById('manage-staff-filter').innerHTML = `<option value="all">Organization: All Members</option>` + opt;
+            document.getElementById('filter-store').innerHTML = `<option value="">Scope: All Branches</option>` + opt;
             renderStaffList(); renderStoresList(); checkDatabaseHealth();
         }
 
@@ -530,12 +505,10 @@
                 const today = new Date().toISOString().split('T')[0];
                 const res = await sheetsRequest('GET', '/values/Attendance!A2:D');
                 const logs = (res.values || []).filter(r => r[1] === today && r[2].toLowerCase() === appState.user.email.toLowerCase().trim());
-                const hasOut = logs.some(l => l[3] === 'OUT');
-                const hasIn = logs.some(l => l[3] === 'IN');
-                if (hasOut) { document.getElementById('shift-status').innerText = "SHIFT CLOSED"; document.getElementById('punch-workflow').classList.add('hidden'); document.getElementById('shift-completed').classList.remove('hidden'); }
-                else if (hasIn) { document.getElementById('shift-status').innerText = "OUT PENDING"; startGeofencing(); }
-                else { document.getElementById('shift-status').innerText = "IN PENDING"; startGeofencing(); }
-            } catch (e) { startGeofencing(); }
+                if (logs.some(l => l[3] === 'OUT')) { document.getElementById('shift-status').innerText = "SHIFT CLOSED"; document.getElementById('punch-workflow').classList.add('hidden'); document.getElementById('shift-completed').classList.remove('hidden'); }
+                else if (logs.some(l => l[3] === 'IN')) { document.getElementById('shift-status').innerText = "OUT PENDING"; }
+                else { document.getElementById('shift-status').innerText = "IN PENDING"; }
+            } catch (e) {}
         }
 
         async function adminSyncDatabase() {
@@ -556,22 +529,26 @@
             } else { setAdminTab('dash'), toggleView('admin'); }
         }
 
-        async function updateSecuritySettings() { showLoader(true, "Saving..."); const pin = document.getElementById('admin-pin-code').value; const en = document.getElementById('pin-toggle').checked; try { await sheetsRequest('PUT', '/values/Settings!A1:B2?valueInputOption=RAW', { values: [['PIN_ENABLED', en], ['ADMIN_PIN', pin]] }); appState.settings = { pin, pinEnabled: en }; showToast("Admin Credentials Updated"); } catch (e) { alert(e.message); } finally { showLoader(false); } }
+        async function updateSecuritySettings() { showLoader(true, "Saving Security..."); const pin = document.getElementById('admin-pin-code').value; const en = document.getElementById('pin-toggle').checked; try { await sheetsRequest('PUT', '/values/Settings!A1:B2?valueInputOption=RAW', { values: [['PIN_ENABLED', en], ['ADMIN_PIN', pin]] }); appState.settings = { pin, pinEnabled: en }; showToast("Admin Credentials Updated"); } catch (e) { alert(e.message); } finally { showLoader(false); } }
         
         function renderStaffList() {
             const f = document.getElementById('manage-staff-filter').value;
             const d = f === 'all' ? appState.staff : appState.staff.filter(s => s.store === f);
-            document.getElementById('staff-list').innerHTML = d.map(s => `<div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm border"><div class="text-[10px] font-black uppercase text-indigo-900 tracking-tighter">${s.name}<p class="text-[8px] text-slate-400 font-normal italic">${s.email} • ${s.pos} • ${s.store}</p></div><div class="flex gap-2"><button onclick="editStaff(${s.rowIdx})" class="text-indigo-600 p-2"><i class="fas fa-edit"></i></button><button onclick="deleteRow('Employees', ${s.rowIdx})" class="text-rose-500 p-2"><i class="fas fa-trash"></i></button></div></div>`).join('');
+            try {
+                document.getElementById('staff-list').innerHTML = d.map(s => `<div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm border"><div class="text-[10px] font-black uppercase text-indigo-900 tracking-tighter">${s.name}<p class="text-[8px] text-slate-400 font-normal italic">${s.email} • ${s.pos} • ${s.store}</p></div><div class="flex gap-2"><button onclick="editStaff(${s.rowIdx})" class="text-indigo-600 p-2"><i class="fas fa-edit"></i></button><button onclick="deleteRow('Employees', ${s.rowIdx})" class="text-rose-500 p-2"><i class="fas fa-trash"></i></button></div></div>`).join('');
+            } catch(e) {}
         }
         function renderStoresList() {
-            document.getElementById('stores-list').innerHTML = appState.stores.map(s => `<div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm border border-slate-100"><div class="text-[10px] font-black uppercase text-indigo-900 tracking-tighter">${s.name}<p class="text-[8px] text-slate-400 font-normal italic">Gate: ${s.range}m • ${s.lat}, ${s.lng}</p></div><div class="flex gap-2"><button onclick="editStore(${s.rowIdx})" class="text-indigo-600 p-2"><i class="fas fa-edit"></i></button><button onclick="deleteRow('Stores', ${s.rowIdx})" class="text-rose-500 p-2"><i class="fas fa-trash"></i></button></div></div>`).join('');
+            try {
+                document.getElementById('stores-list').innerHTML = appState.stores.map(s => `<div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm border border-slate-100"><div class="text-[10px] font-black uppercase text-indigo-900 tracking-tighter">${s.name}<p class="text-[8px] text-slate-400 font-normal italic">Gate: ${s.range}m • ${s.lat}, ${s.lng}</p></div><div class="flex gap-2"><button onclick="editStore(${s.rowIdx})" class="text-indigo-600 p-2"><i class="fas fa-edit"></i></button><button onclick="deleteRow('Stores', ${s.rowIdx})" class="text-rose-500 p-2"><i class="fas fa-trash"></i></button></div></div>`).join('');
+            } catch(e) {}
         }
-        async function deleteRow(sheet, idx) { if (!confirm("Delete permanently?")) return; showLoader(true, "Wiping..."); try { const meta = await sheetsRequest('GET', '?fields=sheets.properties'); const id = meta.sheets.find(s => s.properties.title === sheet).properties.sheetId; await sheetsRequest('POST', ':batchUpdate', { requests: [{ deleteDimension: { range: { sheetId: id, dimension: "ROWS", startIndex: idx - 1, endIndex: idx } } }] }); await initializeData(); } catch (e) { alert(e.message); } finally { showLoader(false); } }
-        async function checkDatabaseHealth() { const btn = document.getElementById('btn-repair-db'); const badge = document.getElementById('db-status-badge'); try { const meta = await sheetsRequest('GET', '?fields=sheets.properties.title'); const existing = meta.sheets.map(s => s.properties.title); const needsRepair = ['Stores', 'Employees', 'Attendance', 'Settings'].some(r => !existing.includes(r)); if (needsRepair) { badge.innerText = "ACTION: REPAIR DB"; badge.className = "inline-block px-5 py-2 rounded-full text-[9px] font-black mb-6 bg-rose-100 text-rose-600 shadow-sm italic uppercase"; btn.disabled = false; btn.className = "w-full bg-rose-600 text-white p-6 rounded-3xl font-black"; } else { badge.innerText = "SYSTEM: DB CONNECTED"; badge.className = "inline-block px-5 py-2 rounded-full text-[9px] font-black mb-6 bg-emerald-100 text-emerald-600 shadow-sm italic uppercase"; btn.disabled = true; } } catch (e) { badge.innerText = "SYSTEM: OFFLINE"; } }
+        async function deleteRow(sheet, idx) { if (!confirm("Delete?")) return; showLoader(true, "Wiping..."); try { const meta = await sheetsRequest('GET', '?fields=sheets.properties'); const id = meta.sheets.find(s => s.properties.title === sheet).properties.sheetId; await sheetsRequest('POST', ':batchUpdate', { requests: [{ deleteDimension: { range: { sheetId: id, dimension: "ROWS", startIndex: idx - 1, endIndex: idx } } }] }); await initializeData(); } catch (e) { alert(e.message); } finally { showLoader(false); } }
+        async function checkDatabaseHealth() { const btn = document.getElementById('btn-repair-db'); const badge = document.getElementById('db-status-badge'); try { const meta = await sheetsRequest('GET', '?fields=sheets.properties.title'); const existing = meta.sheets.map(s => s.properties.title); const needsRepair = ['Stores', 'Employees', 'Attendance', 'Settings'].some(r => !existing.includes(r)); if (needsRepair) { badge.innerText = "ACTION: REPAIR DB"; badge.className = "inline-block px-5 py-2 rounded-full text-[9px] font-black mb-6 bg-rose-100 text-rose-600 shadow-sm italic uppercase"; btn.disabled = false; } else { badge.innerText = "SYSTEM: DB CONNECTED"; badge.className = "inline-block px-5 py-2 rounded-full text-[9px] font-black mb-6 bg-emerald-100 text-emerald-600 shadow-sm italic uppercase"; btn.disabled = true; } } catch (e) { badge.innerText = "SYSTEM: OFFLINE"; } }
         function editStore(idx) { const s = appState.stores.find(st => st.rowIdx === idx); document.getElementById('store-name').value = s.name; document.getElementById('store-lat').value = s.lat; document.getElementById('store-lng').value = s.lng; document.getElementById('store-range').value = s.range; document.getElementById('store-row-idx').value = s.rowIdx; document.getElementById('store-form-title').innerText = "Update Hub"; window.scrollTo(0,0); }
         function editStaff(idx) { const s = appState.staff.find(st => st.rowIdx === idx); document.getElementById('emp-email').value = s.email; document.getElementById('emp-name').value = s.name; document.getElementById('emp-position').value = s.pos; document.getElementById('emp-store-select').value = s.store; document.getElementById('staff-row-idx').value = s.rowIdx; document.getElementById('staff-form-title').innerText = "Update Profile"; window.scrollTo(0,0); }
-        function resetStoreForm() { document.getElementById('form-store').reset(); document.getElementById('store-row-idx').value = ""; document.getElementById('store-form-title').innerText = "Add Physical Branch"; }
-        function resetStaffForm() { document.getElementById('form-employee').reset(); document.getElementById('staff-row-idx').value = ""; document.getElementById('staff-form-title').innerText = "Onboard Personnel"; }
+        function resetStoreForm() { document.getElementById('form-store').reset(); document.getElementById('store-row-idx').value = ""; }
+        function resetStaffForm() { document.getElementById('form-employee').reset(); document.getElementById('staff-row-idx').value = ""; }
         document.getElementById('form-store').onsubmit = async (e) => { e.preventDefault(); showLoader(true, "Updating Store..."); const row = [Date.now(), document.getElementById('store-name').value, document.getElementById('store-lat').value, document.getElementById('store-lng').value, document.getElementById('store-range').value]; const idx = document.getElementById('store-row-idx').value; if (idx) await sheetsRequest('PUT', `/values/Stores!A${idx}:E${idx}?valueInputOption=USER_ENTERED`, { values: [row] }); else await sheetsRequest('POST', '/values/Stores!A:A:append?valueInputOption=USER_ENTERED', { values: [row] }); location.reload(); };
         document.getElementById('form-employee').onsubmit = async (e) => { e.preventDefault(); showLoader(true, "Updating Staff..."); const row = [document.getElementById('emp-email').value, document.getElementById('emp-name').value, document.getElementById('emp-store-select').value, document.getElementById('emp-position').value, 'Active']; const idx = document.getElementById('staff-row-idx').value; if (idx) await sheetsRequest('PUT', `/values/Employees!A${idx}:E${idx}?valueInputOption=USER_ENTERED`, { values: [row] }); else await sheetsRequest('POST', '/values/Employees!A:A:append?valueInputOption=USER_ENTERED', { values: [row] }); location.reload(); };
         function showToast(m) { const t = document.getElementById('toast'); document.getElementById('toast-msg').innerText = m; t.style.opacity = "1"; t.style.pointerEvents = "auto"; setTimeout(() => { t.style.opacity = "0"; t.style.pointerEvents = "none"; }, 4000); }
